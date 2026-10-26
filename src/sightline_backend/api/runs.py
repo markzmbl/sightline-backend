@@ -42,7 +42,7 @@ async def answer_card(ws: Ws, run_id: RunId, body: Answers) -> RunCreated:
     operation_id="cancelRun",
     status_code=202,
     description="Stop a run that is queued, running or asking; it ends with status "
-    "cancelled. 409 when the run has already ended.",
+    "cancelled. 409 (not_active) when the run has already ended.",
     response_description="Cancelling; the event stream reports when it has stopped.",
     responses=problems(404, 409),
 )

@@ -80,7 +80,8 @@ class Problem(BaseModel):
 
     detail: str
     code: str | None = _optional(
-        "For 409s, one of not_latest, not_answerable, stale_run, version_conflict; "
+        "For 409s, one of not_latest, not_answerable, not_active, stale_run, "
+        "version_conflict; "
         "too_many_active for 429s."
     )
     errors: list[ErrorItem] | None = _optional()

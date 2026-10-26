@@ -827,7 +827,7 @@
         "description": "Every error, the backend's own and FastAPI's validation errors alike.",
         "properties": {
           "code": {
-            "description": "For 409s, one of not_latest, not_answerable, stale_run, version_conflict; too_many_active for 429s.",
+            "description": "For 409s, one of not_latest, not_answerable, not_active, stale_run, version_conflict; too_many_active for 429s.",
             "title": "Code",
             "type": "string"
           },
@@ -2444,7 +2444,7 @@
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/cancel": {
       "post": {
-        "description": "Stop a run that is queued, running or asking; it ends with status cancelled. 409 when the run has already ended.",
+        "description": "Stop a run that is queued, running or asking; it ends with status cancelled. 409 (not_active) when the run has already ended.",
         "operationId": "cancelRun",
         "parameters": [
           {
