@@ -1,0 +1,3237 @@
+{
+  "components": {
+    "schemas": {
+      "Answers": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "An option id per point id; null means decide for me.",
+            "title": "Answers",
+            "type": "object"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text, which becomes a revision of the thread.",
+            "title": "Text"
+          }
+        },
+        "required": [
+          "answers"
+        ],
+        "title": "Answers",
+        "type": "object"
+      },
+      "AskPolicy": {
+        "enum": [
+          "never",
+          "unsure",
+          "always"
+        ],
+        "type": "string"
+      },
+      "Card": {
+        "properties": {
+          "blocking": {
+            "description": "True when the run waits for an answer; otherwise the card sits beside the chart.",
+            "title": "Blocking",
+            "type": "boolean"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "blocking",
+          "points"
+        ],
+        "title": "Card",
+        "type": "object"
+      },
+      "CardEvent": {
+        "properties": {
+          "card": {
+            "$ref": "#/components/schemas/Card"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "card",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "card"
+        ],
+        "title": "CardEvent",
+        "type": "object"
+      },
+      "Cell": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "ChartEvent": {
+        "properties": {
+          "chart": {
+            "$ref": "#/components/schemas/ChartView"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "chart",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "chart"
+        ],
+        "title": "ChartEvent",
+        "type": "object"
+      },
+      "ChartOption": {
+        "properties": {
+          "chart": {
+            "title": "Chart",
+            "type": "string"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it lets you read (the core's candidates[].reads).",
+            "title": "Hint"
+          },
+          "label": {
+            "description": "The form's name, or the humanised chart class.",
+            "title": "Label",
+            "type": "string"
+          },
+          "score": {
+            "description": "The idiom stage's score for it (candidates[].score).",
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "chart",
+          "label",
+          "hint",
+          "score"
+        ],
+        "title": "ChartOption",
+        "type": "object"
+      },
+      "ChartPick": {
+        "properties": {
+          "chart": {
+            "title": "Chart",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chart"
+        ],
+        "title": "ChartPick",
+        "type": "object"
+      },
+      "ChartView": {
+        "properties": {
+          "alternatives": {
+            "description": "The other admissible charts, for the switcher.",
+            "items": {
+              "$ref": "#/components/schemas/ChartOption"
+            },
+            "title": "Alternatives",
+            "type": "array"
+          },
+          "chart": {
+            "description": "The chart class, e.g. horizontal_bar.",
+            "title": "Chart",
+            "type": "string"
+          },
+          "label": {
+            "description": "The form's name, or the humanised chart class.",
+            "title": "Label",
+            "type": "string"
+          },
+          "png_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set only when perception rendered a PNG.",
+            "title": "Png Url"
+          },
+          "spec": {
+            "additionalProperties": true,
+            "description": "Vega-Lite v5, already carrying the Pattern Perspectives theme config.",
+            "title": "Spec",
+            "type": "object"
+          }
+        },
+        "required": [
+          "chart",
+          "label",
+          "spec",
+          "png_url",
+          "alternatives"
+        ],
+        "title": "ChartView",
+        "type": "object"
+      },
+      "Clarify": {
+        "description": "Why a run ended in clarify, from the core's ClarificationReport. gaps are terms that\nmatched nothing in the data. missing, record and nearest are the data-gap ending: the KPI\nis not possible yet, here is what the warehouse lacks, what would have to be recorded, and\nthe nearest questions it can answer instead. sightline never answers with a silent proxy.",
+        "properties": {
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/Gap"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "nearest": {
+            "description": "Answerable questions, offered as revisions.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Nearest",
+            "type": "array"
+          },
+          "record": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Record",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "gaps",
+          "missing",
+          "record",
+          "nearest",
+          "warnings"
+        ],
+        "title": "Clarify",
+        "type": "object"
+      },
+      "ClarifyEvent": {
+        "properties": {
+          "clarify": {
+            "$ref": "#/components/schemas/Clarify"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "clarify",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "clarify"
+        ],
+        "title": "ClarifyEvent",
+        "type": "object"
+      },
+      "Column": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The attribute type, e.g. nominal or q_ratio.",
+            "title": "Type"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "title": "Column",
+        "type": "object"
+      },
+      "CreateThread": {
+        "properties": {
+          "ask": {
+            "$ref": "#/components/schemas/AskPolicy",
+            "description": "When the run asks the user; unsure when left out."
+          },
+          "question": {
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "CreateThread",
+        "type": "object"
+      },
+      "DecidedBy": {
+        "enum": [
+          "rules",
+          "s1",
+          "s2",
+          "user"
+        ],
+        "type": "string"
+      },
+      "DecisionPoint": {
+        "properties": {
+          "by": {
+            "$ref": "#/components/schemas/DecidedBy"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The System 1 model's confidence, when it answered.",
+            "title": "Confidence"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the rules alone choose.",
+            "title": "Default"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "open": {
+            "description": "Nobody was sure; these are the points the user is asked.",
+            "title": "Open",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/Option"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "stage": {
+            "description": "The pipeline stage that applies the answer.",
+            "title": "Stage",
+            "type": "string"
+          },
+          "step": {
+            "description": "meaning, terms, form, point or detail; meaning and terms block a run.",
+            "title": "Step",
+            "type": "string"
+          },
+          "why": {
+            "description": "Why it is open, or what settled it; empty when nothing to say.",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "step",
+          "question",
+          "options",
+          "chosen",
+          "default",
+          "by",
+          "confidence",
+          "why",
+          "open",
+          "stage"
+        ],
+        "title": "DecisionPoint",
+        "type": "object"
+      },
+      "Definition": {
+        "description": "A definition the run used: the contract's, an approved or proposed registry entry, or\none this run proposed. A proposed one answers at once, marked with its source, and a key\nuser reviews it later.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "description": "The term, as its definition names it: a registry entry's term, a contract metric's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DefinitionSource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RegistryStatus",
+            "description": "proposed or approved (the contract's are approved); a rejected entry never answers."
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "source",
+          "status"
+        ],
+        "title": "Definition",
+        "type": "object"
+      },
+      "DefinitionSource": {
+        "description": "Where a definition the run used comes from.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "library",
+              "drafted",
+              "learned",
+              "contract"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "description": "In words, e.g. \"from sightline's KPI library (ISO 22400-2), not yet approved\" or \"drafted by sightline, not yet approved\".",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text"
+        ],
+        "title": "DefinitionSource",
+        "type": "object"
+      },
+      "Demand": {
+        "properties": {
+          "first_asked": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Asked"
+          },
+          "last_asked": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Asked"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs",
+          "first_asked",
+          "last_asked"
+        ],
+        "title": "Demand",
+        "type": "object"
+      },
+      "EntryChoice": {
+        "description": "For kind default, what users picked on the card for this criterion.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "option": {
+            "title": "Option",
+            "type": "string"
+          }
+        },
+        "required": [
+          "option",
+          "label",
+          "count"
+        ],
+        "title": "EntryChoice",
+        "type": "object"
+      },
+      "EntryGap": {
+        "description": "For kind gap, in the same words as Clarify.missing and Clarify.record.",
+        "properties": {
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "record": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Record",
+            "type": "array"
+          }
+        },
+        "required": [
+          "missing",
+          "record"
+        ],
+        "title": "EntryGap",
+        "type": "object"
+      },
+      "EntryRun": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "thread_id",
+          "question",
+          "rating",
+          "at"
+        ],
+        "title": "EntryRun",
+        "type": "object"
+      },
+      "EntrySource": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "library",
+              "drafted",
+              "learned"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "description": "In words, e.g. \"from sightline's KPI library (ISO 22400-2)\" or \"drafted by sightline\".",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text"
+        ],
+        "title": "EntrySource",
+        "type": "object"
+      },
+      "ErrorEvent": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "type": {
+            "const": "error",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "message",
+          "stage"
+        ],
+        "title": "ErrorEvent",
+        "type": "object"
+      },
+      "ErrorItem": {
+        "description": "FastAPI's error shape; a word collision is type word_collision with ctx\n{word, collides_with}.",
+        "properties": {
+          "ctx": {
+            "additionalProperties": true,
+            "title": "Ctx",
+            "type": "object"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Loc",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ErrorItem",
+        "type": "object"
+      },
+      "Feedback": {
+        "properties": {
+          "rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null clears the rating."
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "Feedback",
+        "type": "object"
+      },
+      "Gap": {
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested": {
+            "title": "Requested",
+            "type": "string"
+          },
+          "slot": {
+            "title": "Slot",
+            "type": "string"
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "slot",
+          "requested",
+          "reason",
+          "suggestions"
+        ],
+        "title": "Gap",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Me": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "workspaces": {
+            "items": {
+              "$ref": "#/components/schemas/Workspace"
+            },
+            "title": "Workspaces",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user",
+          "workspaces"
+        ],
+        "title": "Me",
+        "type": "object"
+      },
+      "Option": {
+        "properties": {
+          "hint": {
+            "description": "Empty when there is none.",
+            "title": "Hint",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "hint"
+        ],
+        "title": "Option",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "Every error, the backend's own and FastAPI's validation errors alike.",
+        "properties": {
+          "code": {
+            "description": "For 409s, one of not_latest, not_answerable, stale_run, version_conflict; too_many_active for 429s; not_implemented for 501s from a route not built yet.",
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorItem"
+            },
+            "title": "Errors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "Rating": {
+        "enum": [
+          "up",
+          "down"
+        ],
+        "type": "string"
+      },
+      "RegistryCounts": {
+        "description": "Proposed entries per kind, regardless of the page's filters (drives the badge).",
+        "properties": {
+          "default": {
+            "title": "Default",
+            "type": "integer"
+          },
+          "gap": {
+            "title": "Gap",
+            "type": "integer"
+          },
+          "measure": {
+            "title": "Measure",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "measure",
+          "default",
+          "gap"
+        ],
+        "title": "RegistryCounts",
+        "type": "object"
+      },
+      "RegistryEntry": {
+        "properties": {
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EntryChoice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The formula or meaning in words; for a default, the label of the chosen measure.",
+            "title": "Definition"
+          },
+          "demand": {
+            "$ref": "#/components/schemas/Demand"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntryGap"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RegistryKind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntrySource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RegistryStatus"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "words": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "The words that name the term, per locale, e.g. {en:[...], de:[...]}.",
+            "title": "Words",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "term",
+          "label",
+          "source",
+          "status",
+          "demand",
+          "words",
+          "definition",
+          "note",
+          "version",
+          "updated_at",
+          "reviewed_by"
+        ],
+        "title": "RegistryEntry",
+        "type": "object"
+      },
+      "RegistryEntryDetail": {
+        "properties": {
+          "choices": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/EntryChoice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choices"
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The formula or meaning in words; for a default, the label of the chosen measure.",
+            "title": "Definition"
+          },
+          "demand": {
+            "$ref": "#/components/schemas/Demand"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntryGap"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RegistryKind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/EntryRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/EntrySource"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RegistryStatus"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "words": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "description": "The words that name the term, per locale, e.g. {en:[...], de:[...]}.",
+            "title": "Words",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "term",
+          "label",
+          "source",
+          "status",
+          "demand",
+          "words",
+          "definition",
+          "note",
+          "version",
+          "updated_at",
+          "reviewed_by",
+          "runs"
+        ],
+        "title": "RegistryEntryDetail",
+        "type": "object"
+      },
+      "RegistryKind": {
+        "description": "measure, a proposed measure; default, a learned default (e.g. \"best plant\" means OEE); gap, data the warehouse lacks.",
+        "enum": [
+          "measure",
+          "default",
+          "gap"
+        ],
+        "type": "string"
+      },
+      "RegistryPage": {
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/RegistryCounts"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RegistryEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "counts"
+        ],
+        "title": "RegistryPage",
+        "type": "object"
+      },
+      "RegistryStatus": {
+        "enum": [
+          "proposed",
+          "approved",
+          "rejected"
+        ],
+        "type": "string"
+      },
+      "RestatementEvent": {
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "restatement",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "text"
+        ],
+        "title": "RestatementEvent",
+        "type": "object"
+      },
+      "Result": {
+        "properties": {
+          "chart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChartView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/Column"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "findings": {
+            "description": "The analysis' findings in words (the core's plan.findings[].text).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "rows": {
+            "description": "At most the first 200 rows.",
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/Cell"
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sql"
+          },
+          "truncated": {
+            "description": "The core truncated, or row_count exceeds the rows sent.",
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sql",
+          "columns",
+          "rows",
+          "row_count",
+          "truncated",
+          "chart",
+          "findings"
+        ],
+        "title": "Result",
+        "type": "object"
+      },
+      "ResultEvent": {
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/Result"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "result",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "result"
+        ],
+        "title": "ResultEvent",
+        "type": "object"
+      },
+      "Review": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ReviewAction"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/ReviewChanges"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "version": {
+            "description": "The version the key user saw.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "version"
+        ],
+        "title": "Review",
+        "type": "object"
+      },
+      "ReviewAction": {
+        "enum": [
+          "approve",
+          "reject",
+          "reopen",
+          "edit"
+        ],
+        "type": "string"
+      },
+      "ReviewChanges": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "words": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Words",
+            "type": "object"
+          }
+        },
+        "title": "ReviewChanges",
+        "type": "object"
+      },
+      "Revise": {
+        "properties": {
+          "message": {
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "Revise",
+        "type": "object"
+      },
+      "RunCreated": {
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "run_id"
+        ],
+        "title": "RunCreated",
+        "type": "object"
+      },
+      "RunError": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          }
+        },
+        "required": [
+          "message",
+          "stage"
+        ],
+        "title": "RunError",
+        "type": "object"
+      },
+      "RunEvent": {
+        "discriminator": {
+          "mapping": {
+            "card": "#/components/schemas/CardEvent",
+            "chart": "#/components/schemas/ChartEvent",
+            "clarify": "#/components/schemas/ClarifyEvent",
+            "error": "#/components/schemas/ErrorEvent",
+            "restatement": "#/components/schemas/RestatementEvent",
+            "result": "#/components/schemas/ResultEvent",
+            "run.status": "#/components/schemas/RunStatusEvent",
+            "stage.finished": "#/components/schemas/StageFinishedEvent",
+            "stage.started": "#/components/schemas/StageStartedEvent"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RunStatusEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StageStartedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StageFinishedEvent"
+          },
+          {
+            "$ref": "#/components/schemas/RestatementEvent"
+          },
+          {
+            "$ref": "#/components/schemas/CardEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ClarifyEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ChartEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ResultEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorEvent"
+          }
+        ],
+        "title": "RunEvent"
+      },
+      "RunStatus": {
+        "description": "superseded ends a run that a newer revision replaced; it is terminal.",
+        "enum": [
+          "queued",
+          "running",
+          "asking",
+          "complete",
+          "clarify",
+          "failed",
+          "cancelled",
+          "superseded"
+        ],
+        "type": "string"
+      },
+      "RunStatusEvent": {
+        "properties": {
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "type": {
+            "const": "run.status",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "status"
+        ],
+        "title": "RunStatusEvent",
+        "type": "object"
+      },
+      "RunSummary": {
+        "description": "One run of a thread in brief; getRun has it in full.",
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "What the user typed for this run.",
+            "title": "Prompt",
+            "type": "string"
+          },
+          "restatement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restatement"
+          },
+          "revision": {
+            "description": "0 for the question, n for the nth revision.",
+            "title": "Revision",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "id",
+          "revision",
+          "prompt",
+          "status",
+          "restatement",
+          "started_at",
+          "finished_at",
+          "feedback"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "RunView": {
+        "properties": {
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Card"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "clarify": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Clarify"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "definitions": {
+            "description": "The proposed and registry definitions the run used, with their source.",
+            "items": {
+              "$ref": "#/components/schemas/Definition"
+            },
+            "title": "Definitions",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Rating"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_event_id": {
+            "description": "The id of the last event folded into this view; open the stream after it.",
+            "title": "Last Event Id",
+            "type": "integer"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "prompt": {
+            "description": "What the user typed for this run.",
+            "title": "Prompt",
+            "type": "string"
+          },
+          "restatement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restatement"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Result"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "description": "0 for the question, n for the nth revision.",
+            "title": "Revision",
+            "type": "integer"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          },
+          "timings": {
+            "description": "One entry per stage.started, in event id order, side states included; a stage that runs again (a reconsider loop) has an entry each time.",
+            "items": {
+              "$ref": "#/components/schemas/StageTiming"
+            },
+            "title": "Timings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "thread_id",
+          "revision",
+          "prompt",
+          "status",
+          "phase",
+          "stage",
+          "started_at",
+          "finished_at",
+          "restatement",
+          "definitions",
+          "card",
+          "clarify",
+          "result",
+          "timings",
+          "error",
+          "feedback",
+          "last_event_id"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
+      "Signal": {
+        "description": "A client beacon, stored as a raw event; nothing interprets it in v1.",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SignalKind"
+          },
+          "thread_id": {
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "thread_id"
+        ],
+        "title": "Signal",
+        "type": "object"
+      },
+      "SignalKind": {
+        "const": "thread_opened",
+        "type": "string"
+      },
+      "StageFinishedEvent": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "elapsed_ms": {
+            "title": "Elapsed Ms",
+            "type": "number"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "type": {
+            "const": "stage.finished",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "phase",
+          "stage",
+          "at",
+          "elapsed_ms"
+        ],
+        "title": "StageFinishedEvent",
+        "type": "object"
+      },
+      "StageStartedEvent": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "type": {
+            "const": "stage.started",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "run_id",
+          "phase",
+          "stage",
+          "at"
+        ],
+        "title": "StageStartedEvent",
+        "type": "object"
+      },
+      "StageTiming": {
+        "properties": {
+          "elapsed_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null while the stage runs.",
+            "title": "Elapsed Ms"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phase",
+          "stage",
+          "started_at",
+          "elapsed_ms"
+        ],
+        "title": "StageTiming",
+        "type": "object"
+      },
+      "Thread": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The latest run in full; getRun fetches an older one."
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "runs": {
+            "description": "One run per revision, oldest first (the question is revision 0), the latest included.",
+            "items": {
+              "$ref": "#/components/schemas/RunSummary"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "created_at",
+          "updated_at",
+          "latest",
+          "runs"
+        ],
+        "title": "Thread",
+        "type": "object"
+      },
+      "ThreadPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ThreadPage",
+        "type": "object"
+      },
+      "ThreadSummary": {
+        "properties": {
+          "active_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The run still queued, running or asking, if any.",
+            "title": "Active Run Id"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "restatement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Restatement"
+          },
+          "revisions": {
+            "description": "How many revisions follow the question.",
+            "title": "Revisions",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "restatement",
+          "status",
+          "active_run_id",
+          "revisions",
+          "updated_at"
+        ],
+        "title": "ThreadSummary",
+        "type": "object"
+      },
+      "User": {
+        "properties": {
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "User",
+        "type": "object"
+      },
+      "Workspace": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pack": {
+            "description": "The core pack (dataset) behind the workspace.",
+            "title": "Pack",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "pack"
+        ],
+        "title": "Workspace",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Ask a question of a workspace's warehouse, revise it by prompt, and follow the run live. A thread is one question plus its revisions; each revision is one run. Runs are asynchronous: creating one answers 202 with its id, and progress arrives on the run's event stream. Stages are not monotonic: a reconsider loop can start abstract again after validate, with the phase back at understand, and side states (clarify, ask, reconsider, restore) can appear as a stage. A run can go from complete back to queued under the same id (an answer to a beside-the-chart card, a chart switch); a run.status queued after running means a worker restarted it. Every error is a Problem. There is no auth in v1: calls are same-origin and carry no header.\n",
+    "title": "sightline API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/me": {
+      "get": {
+        "description": "The caller and every workspace. v1 has no auth: the caller is the one dev user, a key user in every workspace.",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "The caller and the workspaces they may use."
+          }
+        },
+        "summary": "Get Me"
+      }
+    },
+    "/api/v1/workspaces/{ws}/registry/entries": {
+      "get": {
+        "description": "What sightline proposes for the key user to review, most recently asked first.",
+        "operationId": "listRegistryEntries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RegistryKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/RegistryStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryPage"
+                }
+              }
+            },
+            "description": "A page of entries, and the proposed counts per kind."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          }
+        },
+        "summary": "List Registry Entries"
+      }
+    },
+    "/api/v1/workspaces/{ws}/registry/entries/{entry_id}": {
+      "get": {
+        "operationId": "getRegistryEntry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryEntryDetail"
+                }
+              }
+            },
+            "description": "The entry with the runs that used it."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          }
+        },
+        "summary": "Get Registry Entry"
+      }
+    },
+    "/api/v1/workspaces/{ws}/registry/entries/{entry_id}/review": {
+      "post": {
+        "description": "Approve, reject, reopen or edit an entry. The request carries the version the key user saw: 409 with code version_conflict means someone reviewed it first. An edit changes only the label and the words per locale; 422 with an error of type word_collision (loc pointing at the word, ctx {word, collides_with}) means a word belongs to another term. A review applies from the next run on.",
+        "operationId": "reviewRegistryEntry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Review"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistryEntryDetail"
+                }
+              }
+            },
+            "description": "The entry at its new version."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The run or entry is not in a state that allows this; code says why."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          }
+        },
+        "summary": "Review Registry Entry"
+      }
+    },
+    "/api/v1/workspaces/{ws}/runs/{run_id}": {
+      "get": {
+        "operationId": "getRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "The run as it stands."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          }
+        },
+        "summary": "Get Run"
+      }
+    },
+    "/api/v1/workspaces/{ws}/runs/{run_id}/answers": {
+      "post": {
+        "description": "Answer the choice card. A null answer means \"decide for me\". Free text becomes a revision of the thread, which starts a new run. Answers are taken on the thread's latest run while it is asking, or when it is complete with a card that does not block; the run then goes back to queued under the same run_id. 409: not_latest, not_answerable, or stale_run (the run was made by another core version).",
+        "operationId": "answerCard",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Answers"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreated"
+                }
+              }
+            },
+            "description": "The run resumes (same run_id) or a revision starts (new run_id)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The run or entry is not in a state that allows this; code says why."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The workspace has too many active runs (code too_many_active)."
+          }
+        },
+        "summary": "Answer Card"
+      }
+    },
+    "/api/v1/workspaces/{ws}/runs/{run_id}/cancel": {
+      "post": {
+        "description": "Stop a run that is queued, running or asking; it ends with status cancelled. 409 when the run has already ended.",
+        "operationId": "cancelRun",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreated"
+                }
+              }
+            },
+            "description": "Cancelling; the event stream reports when it has stopped."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The run or entry is not in a state that allows this; code says why."
+          }
+        },
+        "summary": "Cancel Run"
+      }
+    },
+    "/api/v1/workspaces/{ws}/runs/{run_id}/chart": {
+      "post": {
+        "description": "Draw the run with another of its charts. Taken on the thread's latest run when it is complete and the chart is one of its alternatives; the run goes back to queued under the same run_id. 409: not_latest or not_answerable.",
+        "operationId": "pickChart",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartPick"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreated"
+                }
+              }
+            },
+            "description": "The run presents again with the chosen chart."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The run or entry is not in a state that allows this; code says why."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The workspace has too many active runs (code too_many_active)."
+          }
+        },
+        "summary": "Pick Chart"
+      }
+    },
+    "/api/v1/workspaces/{ws}/runs/{run_id}/events": {
+      "get": {
+        "description": "Server-sent events. Each frame is `id: <n>`, `event: <type>` and `data: <RunEvent as JSON>`; ids increase per run. Reconnect with `Last-Event-ID` to get only the frames after it (ids are per-run integers from 1, the same counter as RunView.last_event_id). A comment line `: ping` comes every 15 s. The stream ends after a terminal run.status (complete, clarify, failed, cancelled, superseded) or after asking.",
+        "operationId": "runEvents",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The id of the last frame seen; the stream resumes after it.",
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunEvent"
+                }
+              }
+            },
+            "description": "The event stream."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          }
+        },
+        "summary": "Run Events"
+      }
+    },
+    "/api/v1/workspaces/{ws}/runs/{run_id}/feedback": {
+      "post": {
+        "description": "Rate the run, up or down; a null rating clears it.",
+        "operationId": "giveFeedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          }
+        },
+        "summary": "Give Feedback"
+      }
+    },
+    "/api/v1/workspaces/{ws}/schema": {
+      "get": {
+        "operationId": "getSchema",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Getschema",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The workspace's warehouse schema (shape not yet drafted)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          }
+        },
+        "summary": "Get Schema"
+      }
+    },
+    "/api/v1/workspaces/{ws}/signals": {
+      "post": {
+        "description": "A beacon from the client, stored as a raw event that nothing interprets in v1: thread_opened when the user opens a thread.",
+        "operationId": "sendSignal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Signal"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          }
+        },
+        "summary": "Send Signal"
+      }
+    },
+    "/api/v1/workspaces/{ws}/threads": {
+      "get": {
+        "operationId": "listThreads",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadPage"
+                }
+              }
+            },
+            "description": "Threads, most recently updated first."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          }
+        },
+        "summary": "List Threads"
+      },
+      "post": {
+        "description": "Ask a question. 429 (too_many_active) while the workspace has as many runs queued, running or asking as it allows.",
+        "operationId": "createThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateThread"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreated"
+                }
+              }
+            },
+            "description": "The thread exists and its first run is queued."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The workspace has too many active runs (code too_many_active)."
+          }
+        },
+        "summary": "Create Thread"
+      }
+    },
+    "/api/v1/workspaces/{ws}/threads/{thread_id}": {
+      "get": {
+        "operationId": "getThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Thread"
+                }
+              }
+            },
+            "description": "The thread with its latest run in full and every run in brief, oldest first."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          }
+        },
+        "summary": "Get Thread"
+      }
+    },
+    "/api/v1/workspaces/{ws}/threads/{thread_id}/revisions": {
+      "post": {
+        "description": "Revise the question by prompt. Post it directly, never /cancel first: a run of this thread still active is superseded (it ends with status superseded). Cancel is cooperative at stage boundaries, so the old run may emit events for up to a minute; clients drop events of runs that are not the thread's active run.",
+        "operationId": "reviseThread",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revise"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreated"
+                }
+              }
+            },
+            "description": "The revision's run is queued."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The workspace has too many active runs (code too_many_active)."
+          }
+        },
+        "summary": "Revise Thread"
+      }
+    },
+    "/api/v1/workspaces/{ws}/threads/{thread_id}/revisions/{n}": {
+      "delete": {
+        "description": "Take back revision n (n >= 1 is the thread's nth revision). Like reviseThread, it supersedes a run of this thread still active and starts a new run, whose prompt is the text taken back.",
+        "operationId": "takeBackRevision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ws",
+            "required": true,
+            "schema": {
+              "title": "Ws",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "thread_id",
+            "required": true,
+            "schema": {
+              "title": "Thread Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "n",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "N",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreated"
+                }
+              }
+            },
+            "description": "The revision is taken back and the thread runs again without it."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "No such workspace, or nothing by that id in it."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The workspace has too many active runs (code too_many_active)."
+          }
+        },
+        "summary": "Take Back Revision"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "The service is up."
+          }
+        },
+        "summary": "Health"
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ]
+}
