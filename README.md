@@ -13,7 +13,7 @@ The plan, with its decisions, is
 This repo holds the contract only:
 
 - `src/sightline_backend/contract.py`: the API's pydantic models, mirroring the frontend's
-  `sightline-web/contract/openapi.draft.yaml` with its schema and operation names.
+  `web/contract/openapi.draft.yaml` with its schema and operation names.
 - `src/sightline_backend/api/`: every route with its path, method, operationId, status
   codes and models. Each one answers 501 with a Problem (`code: not_implemented`) until
   its phase builds it; `/healthz` answers. That 501 is scaffolding, not contract: no
@@ -37,7 +37,7 @@ The docs are at `http://127.0.0.1:8000/api/v1/docs`, the document at `/api/v1/op
 ## The contract comes first
 
 `contract/openapi.json` is what `sightline-web` generates its types from
-(`npm run gen:api` reads `../sightline-backend/contract/openapi.json`). After a change to
+(`npm run gen:api` reads `../backend/contract/openapi.json`; both sit in sightline as submodules). After a change to
 `contract.py` or a route, export it again and commit the file with the change:
 
 ```
