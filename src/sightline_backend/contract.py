@@ -55,7 +55,8 @@ def _no_nul(text: str) -> str:
     return text
 
 
-# what the user types: a question, a revision, a card's free text (422 on a NUL character)
+# every string a request carries into Postgres: text and jsonb refuse a NUL character, so
+# it is a 422 here rather than a 500 there
 Text = Annotated[str, AfterValidator(_no_nul)]
 Prompt = Annotated[str, Field(min_length=1), AfterValidator(_no_nul)]
 
@@ -80,7 +81,7 @@ class Problem(BaseModel):
     detail: str
     code: str | None = _optional(
         "For 409s, one of not_latest, not_answerable, stale_run, version_conflict; "
-        "too_many_active for 429s; not_implemented for 501s from a route not built yet."
+        "too_many_active for 429s."
     )
     errors: list[ErrorItem] | None = _optional()
 
@@ -239,31 +240,25 @@ type RegistryKind = Annotated[
 type RegistryStatus = Literal["proposed", "approved", "rejected"]
 
 
-class DefinitionSource(BaseModel):
-    """Where a definition the run used comes from."""
-
-    kind: Literal["library", "drafted", "learned", "contract"]
+class EntrySource(BaseModel):
+    kind: Literal["library", "drafted", "learned"]
     text: str = Field(
-        description="In words, e.g. \"from sightline's KPI library (ISO 22400-2), not yet "
-        'approved" or "drafted by sightline, not yet approved".'
+        description="In words, e.g. \"from sightline's KPI library (ISO 22400-2)\" or "
+        '"drafted by sightline".'
     )
 
 
 class Definition(BaseModel):
-    """A definition the run used: the contract's, an approved or proposed registry entry, or
-    one this run proposed. A proposed one answers at once, marked with its source, and a key
-    user reviews it later.
+    """A definition the run used: a registry entry, approved or proposed, or one this run
+    proposed. A proposed one answers at once, marked with its source, and a key user reviews
+    it later.
     """
 
-    name: str = Field(
-        description="The term, as its definition names it: a registry entry's term, a "
-        "contract metric's name."
-    )
+    name: str = Field(description="The term it defines, as RegistryEntry.term names it.")
     label: str
-    source: DefinitionSource
-    status: RegistryStatus = Field(
-        description="proposed or approved (the contract's are approved); a rejected entry "
-        "never answers."
+    source: EntrySource
+    status: Literal["proposed", "approved"] = Field(
+        description="A rejected entry never answers, so it is never listed here."
     )
 
 
@@ -333,9 +328,7 @@ class Thread(BaseModel):
     question: str
     created_at: datetime
     updated_at: datetime
-    latest: RunView | None = Field(
-        description="The latest run in full; getRun fetches an older one."
-    )
+    latest: RunView = Field(description="The latest run in full; getRun fetches an older one.")
     runs: list[RunSummary] = Field(
         description="One run per revision, oldest first (the question is revision 0), the "
         "latest included."
@@ -362,7 +355,7 @@ class Revise(BaseModel):
 
 
 class Answers(BaseModel):
-    answers: dict[str, str | None] = Field(
+    answers: dict[Text, Text | None] = Field(
         description="An option id per point id; null means decide for me."
     )
     text: Text | None = _optional(
@@ -371,7 +364,7 @@ class Answers(BaseModel):
 
 
 class ChartPick(BaseModel):
-    chart: str
+    chart: Text
 
 
 class Feedback(BaseModel):
@@ -379,14 +372,6 @@ class Feedback(BaseModel):
 
 
 # ---------------------------------------------------------------------------- registry
-
-
-class EntrySource(BaseModel):
-    kind: Literal["library", "drafted", "learned"]
-    text: str = Field(
-        description="In words, e.g. \"from sightline's KPI library (ISO 22400-2)\" or "
-        '"drafted by sightline".'
-    )
 
 
 class Demand(BaseModel):
@@ -463,14 +448,14 @@ type ReviewAction = Literal["approve", "reject", "reopen", "edit"]
 
 
 class ReviewChanges(BaseModel):
-    label: str | None = _optional()
-    words: dict[str, list[str]] | None = _optional()
+    label: Text | None = _optional()
+    words: dict[Text, list[Text]] | None = _optional()
 
 
 class Review(BaseModel):
     action: ReviewAction
     version: int = Field(description="The version the key user saw.")
-    note: str | None = _optional()
+    note: Text | None = _optional()
     changes: ReviewChanges | None = _optional()
 
 
@@ -483,7 +468,7 @@ class Signal(BaseModel):
     """A client beacon, stored as a raw event; nothing interprets it in v1."""
 
     kind: SignalKind
-    thread_id: str
+    thread_id: Text
 
 
 # ------------------------------------------------------------------------------ events

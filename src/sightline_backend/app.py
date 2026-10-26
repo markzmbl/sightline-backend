@@ -52,12 +52,19 @@ def _contract(doc: dict[str, Any]) -> dict[str, Any]:
     - FastAPI adds a 422 HTTPValidationError to any route with parameters; the routes list
       the 422s they can answer, and every error is a Problem.
     - No security: v1 has no auth.
+    - An optional query parameter (`cursor: str | None = None`) is left out, never sent as
+      null, so its schema drops the null branch FastAPI gives it.
+    - No summaries: FastAPI makes them from the handler's name, the contract does not have
+      them.
     - The event stream is RunEvent frames, with the Last-Event-ID header; FastAPI shows an
       SSE route as generic frames and its errors as text/event-stream too.
     """
     for path in doc["paths"].values():
         for operation in path.values():
             operation.pop("security", None)
+            operation.pop("summary", None)
+            for parameter in operation.get("parameters", []):
+                _drop_null(parameter["schema"])
             responses = operation.get("responses", {})
             invalid = responses.get("422", {}).get("content", {}).get("application/json", {})
             if invalid.get("schema", {}).get("$ref", "").endswith("/HTTPValidationError"):
@@ -76,6 +83,15 @@ def _contract(doc: dict[str, Any]) -> dict[str, Any]:
     params = [p for p in stream.get("parameters", []) if p.get("name") != "Last-Event-ID"]
     stream["parameters"] = [*params, _LAST_EVENT_ID]
     return doc
+
+
+def _drop_null(schema: dict[str, Any]) -> None:
+    # anyOf [X, {type: null}] becomes X, keeping the schema's own keys (title, default)
+    branches = schema.get("anyOf", [])
+    rest = [b for b in branches if b != {"type": "null"}]
+    if len(rest) == 1 and len(branches) == 2:
+        del schema["anyOf"]
+        schema.update(rest[0])
 
 
 def create_app() -> FastAPI:

@@ -451,23 +451,28 @@
         "type": "object"
       },
       "Definition": {
-        "description": "A definition the run used: the contract's, an approved or proposed registry entry, or\none this run proposed. A proposed one answers at once, marked with its source, and a key\nuser reviews it later.",
+        "description": "A definition the run used: a registry entry, approved or proposed, or one this run\nproposed. A proposed one answers at once, marked with its source, and a key user reviews\nit later.",
         "properties": {
           "label": {
             "title": "Label",
             "type": "string"
           },
           "name": {
-            "description": "The term, as its definition names it: a registry entry's term, a contract metric's name.",
+            "description": "The term it defines, as RegistryEntry.term names it.",
             "title": "Name",
             "type": "string"
           },
           "source": {
-            "$ref": "#/components/schemas/DefinitionSource"
+            "$ref": "#/components/schemas/EntrySource"
           },
           "status": {
-            "$ref": "#/components/schemas/RegistryStatus",
-            "description": "proposed or approved (the contract's are approved); a rejected entry never answers."
+            "description": "A rejected entry never answers, so it is never listed here.",
+            "enum": [
+              "proposed",
+              "approved"
+            ],
+            "title": "Status",
+            "type": "string"
           }
         },
         "required": [
@@ -477,32 +482,6 @@
           "status"
         ],
         "title": "Definition",
-        "type": "object"
-      },
-      "DefinitionSource": {
-        "description": "Where a definition the run used comes from.",
-        "properties": {
-          "kind": {
-            "enum": [
-              "library",
-              "drafted",
-              "learned",
-              "contract"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "text": {
-            "description": "In words, e.g. \"from sightline's KPI library (ISO 22400-2), not yet approved\" or \"drafted by sightline, not yet approved\".",
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "text"
-        ],
-        "title": "DefinitionSource",
         "type": "object"
       },
       "Demand": {
@@ -848,7 +827,7 @@
         "description": "Every error, the backend's own and FastAPI's validation errors alike.",
         "properties": {
           "code": {
-            "description": "For 409s, one of not_latest, not_answerable, stale_run, version_conflict; too_many_active for 429s; not_implemented for 501s from a route not built yet.",
+            "description": "For 409s, one of not_latest, not_answerable, stale_run, version_conflict; too_many_active for 429s.",
             "title": "Code",
             "type": "string"
           },
@@ -1916,14 +1895,7 @@
             "type": "string"
           },
           "latest": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RunView"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "$ref": "#/components/schemas/RunView",
             "description": "The latest run in full; getRun fetches an older one."
           },
           "question": {
@@ -2119,8 +2091,7 @@
             },
             "description": "The caller and the workspaces they may use."
           }
-        },
-        "summary": "Get Me"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/registry/entries": {
@@ -2142,14 +2113,7 @@
             "name": "kind",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/RegistryKind"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "$ref": "#/components/schemas/RegistryKind",
               "title": "Kind"
             }
           },
@@ -2158,14 +2122,7 @@
             "name": "status",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/RegistryStatus"
-                },
-                {
-                  "type": "null"
-                }
-              ],
+              "$ref": "#/components/schemas/RegistryStatus",
               "title": "Status"
             }
           },
@@ -2174,15 +2131,8 @@
             "name": "cursor",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Cursor"
+              "title": "Cursor",
+              "type": "string"
             }
           },
           {
@@ -2229,8 +2179,7 @@
             },
             "description": "The request is not valid; errors says where."
           }
-        },
-        "summary": "List Registry Entries"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/registry/entries/{entry_id}": {
@@ -2277,8 +2226,7 @@
             },
             "description": "No such workspace, or nothing by that id in it."
           }
-        },
-        "summary": "Get Registry Entry"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/registry/entries/{entry_id}/review": {
@@ -2356,8 +2304,7 @@
             },
             "description": "The request is not valid; errors says where."
           }
-        },
-        "summary": "Review Registry Entry"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}": {
@@ -2404,8 +2351,7 @@
             },
             "description": "No such workspace, or nothing by that id in it."
           }
-        },
-        "summary": "Get Run"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/answers": {
@@ -2493,8 +2439,7 @@
             },
             "description": "The workspace has too many active runs (code too_many_active)."
           }
-        },
-        "summary": "Answer Card"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/cancel": {
@@ -2552,8 +2497,7 @@
             },
             "description": "The run or entry is not in a state that allows this; code says why."
           }
-        },
-        "summary": "Cancel Run"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/chart": {
@@ -2641,8 +2585,7 @@
             },
             "description": "The workspace has too many active runs (code too_many_active)."
           }
-        },
-        "summary": "Pick Chart"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/events": {
@@ -2699,8 +2642,7 @@
             },
             "description": "No such workspace, or nothing by that id in it."
           }
-        },
-        "summary": "Run Events"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/feedback": {
@@ -2761,8 +2703,7 @@
             },
             "description": "The request is not valid; errors says where."
           }
-        },
-        "summary": "Give Feedback"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/schema": {
@@ -2802,8 +2743,7 @@
             },
             "description": "No such workspace, or nothing by that id in it."
           }
-        },
-        "summary": "Get Schema"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/signals": {
@@ -2855,8 +2795,7 @@
             },
             "description": "The request is not valid; errors says where."
           }
-        },
-        "summary": "Send Signal"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/threads": {
@@ -2877,15 +2816,8 @@
             "name": "cursor",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Cursor"
+              "title": "Cursor",
+              "type": "string"
             }
           },
           {
@@ -2932,8 +2864,7 @@
             },
             "description": "The request is not valid; errors says where."
           }
-        },
-        "summary": "List Threads"
+        }
       },
       "post": {
         "description": "Ask a question. 429 (too_many_active) while the workspace has as many runs queued, running or asking as it allows.",
@@ -3000,8 +2931,7 @@
             },
             "description": "The workspace has too many active runs (code too_many_active)."
           }
-        },
-        "summary": "Create Thread"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/threads/{thread_id}": {
@@ -3048,8 +2978,7 @@
             },
             "description": "No such workspace, or nothing by that id in it."
           }
-        },
-        "summary": "Get Thread"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/threads/{thread_id}/revisions": {
@@ -3127,8 +3056,7 @@
             },
             "description": "The workspace has too many active runs (code too_many_active)."
           }
-        },
-        "summary": "Revise Thread"
+        }
       }
     },
     "/api/v1/workspaces/{ws}/threads/{thread_id}/revisions/{n}": {
@@ -3206,8 +3134,7 @@
             },
             "description": "The workspace has too many active runs (code too_many_active)."
           }
-        },
-        "summary": "Take Back Revision"
+        }
       }
     },
     "/healthz": {
@@ -3224,8 +3151,7 @@
             },
             "description": "The service is up."
           }
-        },
-        "summary": "Health"
+        }
       }
     }
   },
