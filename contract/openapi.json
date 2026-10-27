@@ -359,12 +359,12 @@
           },
           "spec": {
             "additionalProperties": true,
-            "description": "Vega-Lite v5, already carrying the Pattern Perspectives theme config. spec.description is plain language for screen readers; rule ids live in spec.usermeta. The main chart is one view whose comparisons are layers (width \"container\" keeps working), each with the Vega-Lite name that Support.layer gives; a chart switch keeps those layers. Its title.text equals storyline.top verbatim (after render's rewording) when there is a storyline, and its subtitle holds only bases. A small chart is a single view (no concat, facet or repeat) with no top-level width, an explicit small height, and no title or subtitle: Support.text is its caption. Key-line points and notes never go into a spec.",
+            "description": "Vega-Lite v5, already carrying the Pattern Perspectives theme config. spec.description is plain language for screen readers; rule ids live in spec.usermeta. The main chart is one view whose comparisons are layers (width \"container\" keeps working), each with the Vega-Lite name that Support.layer gives; a chart switch keeps those layers. Its title.text equals storyline.top verbatim (after render's rewording) when there is a storyline, and on every run its subtitle holds only bases (filters, window, aggregation): exclusions, partial periods and every other caveat live in Result.notes. A small chart is a single view (no concat, facet or repeat) with no top-level width, an explicit small height, and no title or subtitle: Support.text is its caption. Key-line points and notes never go into a spec.",
             "title": "Spec",
             "type": "object"
           },
           "subtitle": {
-            "description": "The drawn chart's subtitle lines, as in the spec: bases only. Empty on a small chart.",
+            "description": "The drawn chart's subtitle lines, as in the spec: bases only (filters, window, aggregation) on every run, never a caveat. Empty on a small chart.",
             "items": {
               "type": "string"
             },
@@ -1811,7 +1811,7 @@
         "type": "object"
       },
       "Result": {
-        "description": "The answer. One home per text: the storyline's top is the main chart's title,\nkey_line and notes live only in the storyline, findings only without a storyline, and a\nsmall chart's caption only in Support.text.",
+        "description": "The answer. One home per text: the storyline's top is the main chart's title, the key\nline lives only in the storyline, every caveat only in notes, findings only without a\nstoryline, and a small chart's caption only in Support.text.",
         "properties": {
           "chart": {
             "anyOf": [
@@ -1858,6 +1858,14 @@
             ],
             "description": "The id of the support whose chart is chart; null without a storyline.",
             "title": "Lead"
+          },
+          "notes": {
+            "description": "Every caveat of the answer, on every run, and their only home (never in a spec's subtitle, the key line or the restatement): the rows left out and the periods left out as incomplete; with the analysis also the breaking checks that changed or limited the claim, the pruned branches, the data edges and what was not checked.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
           },
           "row_count": {
             "title": "Row Count",
@@ -1935,6 +1943,7 @@
           "truncated",
           "chart",
           "findings",
+          "notes",
           "verdict",
           "concerns",
           "storyline",
@@ -3224,22 +3233,14 @@
         "type": "string"
       },
       "Storyline": {
-        "description": "The answer's argument, from the analysis (gather): the governing thought on top, its\nsupporting statements, and the notes that temper it.",
+        "description": "The answer's argument, from the analysis (gather): the governing thought on top and its\nsupporting statements. What tempers it lives in Result.notes.",
         "properties": {
           "key_line": {
-            "description": "At most five supporting statements, in order.",
+            "description": "At most five supporting statements, in order. A breaking check that changed or limited the claim is a note (Result.notes), never a key-line point.",
             "items": {
               "$ref": "#/components/schemas/KeyPoint"
             },
             "title": "Key Line",
-            "type": "array"
-          },
-          "notes": {
-            "description": "The only home of the breaking checks that changed or limited the claim, the pruned branches, the data edges and what was not checked; never in a spec.",
-            "items": {
-              "type": "string"
-            },
-            "title": "Notes",
             "type": "array"
           },
           "top": {
@@ -3250,8 +3251,7 @@
         },
         "required": [
           "top",
-          "key_line",
-          "notes"
+          "key_line"
         ],
         "title": "Storyline",
         "type": "object"

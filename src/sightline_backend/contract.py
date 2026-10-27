@@ -364,10 +364,11 @@ CHART_SPEC = (
     'one view whose comparisons are layers (width "container" keeps working), each with the '
     "Vega-Lite name that Support.layer gives; a chart switch keeps those layers. Its "
     "title.text equals storyline.top verbatim (after render's rewording) when there is a "
-    "storyline, and its subtitle holds only bases. A small chart is a single view (no "
-    "concat, facet or repeat) with no top-level width, an explicit small height, and no "
-    "title or subtitle: Support.text is its caption. Key-line points and notes never go "
-    "into a spec."
+    "storyline, and on every run its subtitle holds only bases (filters, window, "
+    "aggregation): exclusions, partial periods and every other caveat live in Result.notes. "
+    "A small chart is a single view (no concat, facet or repeat) with no top-level width, an "
+    "explicit small height, and no title or subtitle: Support.text is its caption. Key-line "
+    "points and notes never go into a spec."
 )
 
 
@@ -381,8 +382,8 @@ class ChartView(BaseModel):
         description="The drawn chart's title text, as in the spec; null on a small chart."
     )
     subtitle: list[str] = Field(
-        description="The drawn chart's subtitle lines, as in the spec: bases only. Empty on a "
-        "small chart."
+        description="The drawn chart's subtitle lines, as in the spec: bases only (filters, "
+        "window, aggregation) on every run, never a caveat. Empty on a small chart."
     )
     hint: str | None = Field(description="What the drawn chart lets you read.")
     score: float | None = Field(
@@ -437,17 +438,16 @@ class KeyPoint(BaseModel):
 
 
 class Storyline(BaseModel):
-    """The answer's argument, from the analysis (gather): the governing thought on top, its
-    supporting statements, and the notes that temper it."""
+    """The answer's argument, from the analysis (gather): the governing thought on top and its
+    supporting statements. What tempers it lives in Result.notes."""
 
     top: str = Field(
         description="The governing thought, stated as the effect. The main chart's title.text "
         "equals it verbatim (after render's rewording)."
     )
-    key_line: list[KeyPoint] = Field(description="At most five supporting statements, in order.")
-    notes: list[str] = Field(
-        description="The only home of the breaking checks that changed or limited the claim, "
-        "the pruned branches, the data edges and what was not checked; never in a spec."
+    key_line: list[KeyPoint] = Field(
+        description="At most five supporting statements, in order. A breaking check that "
+        "changed or limited the claim is a note (Result.notes), never a key-line point."
     )
 
 
@@ -499,9 +499,9 @@ type ResultVerdict = Annotated[
 
 
 class Result(BaseModel):
-    """The answer. One home per text: the storyline's top is the main chart's title,
-    key_line and notes live only in the storyline, findings only without a storyline, and a
-    small chart's caption only in Support.text.
+    """The answer. One home per text: the storyline's top is the main chart's title, the key
+    line lives only in the storyline, every caveat only in notes, findings only without a
+    storyline, and a small chart's caption only in Support.text.
     """
 
     sql: str | None = Field(description="The SQL of the step step_id names.")
@@ -522,6 +522,12 @@ class Result(BaseModel):
     findings: list[str] = Field(
         description="The analysis' findings in words (the core's plan.findings[].text); empty "
         "when storyline is set."
+    )
+    notes: list[str] = Field(
+        description="Every caveat of the answer, on every run, and their only home (never in a "
+        "spec's subtitle, the key line or the restatement): the rows left out and the periods "
+        "left out as incomplete; with the analysis also the breaking checks that changed or "
+        "limited the claim, the pruned branches, the data edges and what was not checked."
     )
     verdict: ResultVerdict
     concerns: list[str] = Field(

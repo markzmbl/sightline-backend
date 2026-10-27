@@ -127,8 +127,8 @@ SHAPES = {
     "RegistryPage": "counts items kinds next_cursor",
     "RegistryStatus": "proposed|approved|rejected",
     "RestatementEvent": "run_id text type",
-    "Result": "chart columns concerns findings lead row_count rows sql step_id storyline supports "
-    "truncated verdict",
+    "Result": "chart columns concerns findings lead notes row_count rows sql step_id storyline "
+    "supports truncated verdict",
     "ResultEvent": "result run_id type",
     "ResultVerdict": "pass|warn|fail",
     "Review": "action changes? note? version",
@@ -163,7 +163,7 @@ SHAPES = {
     "StepRole": "answer|probe|reference|denominator|comparison|decomposition|check|lookup",
     "StepStartedEvent": "at run_id stage step type",
     "StepVerdict": "as_expected|contradicts|routine|inconclusive|no_effect|failed",
-    "Storyline": "key_line notes top",
+    "Storyline": "key_line top",
     "Support": "chart drawn id layer note point role text",
     "SupportDrawn": "main|small|dropped|none",
     "SupportRole": "answer|comparison|reference|routine_band|whole|rest|denominator|decomposition|"
