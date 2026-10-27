@@ -4,4 +4,4 @@ P0 is the contract: the API's models (contract.py), its routes as stubs (api/), 
 OpenAPI file the web client's types are generated from (contract/openapi.json).
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"

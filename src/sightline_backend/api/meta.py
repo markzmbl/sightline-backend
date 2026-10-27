@@ -39,7 +39,7 @@ async def get_me() -> Me:
     operation_id="getSchema",
     description="The workspace's warehouse as users read it, for browsing what can be asked.",
     response_description="The workspace's tables with their columns, and its measures.",
-    responses=problems(404, 501),
+    responses=problems(404, 501, not_found=("no_workspace",)),
 )
 async def get_schema(ws: Ws) -> SchemaInfo:
     raise not_implemented()

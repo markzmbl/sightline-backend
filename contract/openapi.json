@@ -87,9 +87,7 @@
             "type": "boolean"
           },
           "kind": {
-            "description": "s1 (the System 1 model), llm (System 2, titles) or vision.",
-            "title": "Kind",
-            "type": "string"
+            "$ref": "#/components/schemas/CallKind"
           },
           "model": {
             "title": "Model",
@@ -110,8 +108,17 @@
         "title": "CallInfo",
         "type": "object"
       },
+      "CallKind": {
+        "description": "s1: the System 1 model; s2: System 2, titles included; vision: a vision model reading the chart's image.",
+        "enum": [
+          "s1",
+          "s2",
+          "vision"
+        ],
+        "type": "string"
+      },
       "Card": {
-        "description": "The points a run asks, from the core's decisions (to_ask and beside).\n\nA card asks the first step that has points to ask: the points nobody was sure of (open)\nand, under ask=always, also the judgement points no rule settled. A card that does not\nblock, after the drawing, applies the same rule to the form, point and detail steps, and\nadds the points an approved default settled (by = default). Every point in points is\nasked; open keeps its meaning (nobody was sure), so under ask=always a point can be\nasked with open = false. A null answer (\"decide for me\") keeps the chosen option,\nSystem 1's lean or else the rules' default, and by stays s1 or rules.",
+        "description": "The points a run asks, from the core's decisions (to_ask and beside).\n\nA card asks the first step that has points to ask: the points nobody was sure of (open)\nand, under ask=always, also the judgement points no rule settled. A card that does not\nblock, after the drawing, applies the same rule to the form, point and detail steps, and\nadds the points an approved default settled (by = default). Every point in points is\nasked; open keeps its meaning (nobody was sure), so under ask=always a point can be\nasked with open = false. A null answer (\"decide for me\") keeps the chosen option (an\napproved default, else System 1's lean, else the rules' default), and by stays default,\ns1 or rules.",
         "properties": {
           "blocking": {
             "description": "True when the run waits for an answer; otherwise the card sits beside the chart.",
@@ -696,7 +703,7 @@
         "type": "object"
       },
       "Definition": {
-        "description": "A definition the run used: a registry entry, approved or proposed, or one this run\nproposed. A proposed one answers at once, marked with its source, and a key user reviews\nit later. That a definition is not yet approved is said here, never in the restatement.",
+        "description": "A definition the run used: a registry entry, approved or proposed, or one this run\nproposed. A proposed one answers at once, marked with its source, and a key user reviews\nit later. The restatement never carries a \"Defined as ...\" clause; a definition's wording\nand its approval live only in definitions[].",
         "properties": {
           "definition": {
             "anyOf": [
@@ -795,6 +802,7 @@
         "type": "object"
       },
       "EntryChange": {
+        "description": "One change of an entry. Only a review (approve, reject, reopen, edit) changes the\nentry's version; demand updates and repeated proposals do not, so a run asking for the\nentry never causes a version_conflict.",
         "properties": {
           "action": {
             "anyOf": [
@@ -841,7 +849,7 @@
             "title": "Note"
           },
           "version": {
-            "description": "The entry's version after the change.",
+            "description": "The entry's version after the change: moved by a review, kept by sightline's own changes.",
             "title": "Version",
             "type": "integer"
           }
@@ -1045,7 +1053,7 @@
         "type": "object"
       },
       "ErrorItem": {
-        "description": "FastAPI's error shape, technical: for the client to act on, not to show users. The\nbackend's own types: word_collision (ctx {word, collides_with}); follow_up_mismatch (a\nrevision's message is not the question of the follow-up it sends); stale_run (loc\n[path, run_id], ctx {prompt}: the run's prompt, to ask again with).",
+        "description": "FastAPI's error shape, technical: for the client to act on, not to show users. The\nbackend's own types: word_collision (ctx {word, collides_with}); follow_up_mismatch (a\nrevision's message is not the question of the follow-up it sends); via_with_follows (loc\n[body, via]: a revision sent via together with follows); stale_run (loc [path, run_id],\nctx {prompt}: the run's prompt, to ask again with).",
         "properties": {
           "ctx": {
             "additionalProperties": true,
@@ -1366,9 +1374,8 @@
         "description": "Every error, the backend's own and FastAPI's validation errors alike.",
         "properties": {
           "code": {
-            "description": "Names the error. 404: no_workspace, no_thread, no_run, no_entry, no_step. 409: not_latest, not_answerable, stale_run, version_conflict, not_allowed. 429: too_many_active. 501: not_implemented, while a route is a stub. A 422 has no code; errors says where. stale_run: the run was made by an earlier version of sightline and can't be changed any more; ask again for a fresh answer (errors[0].ctx carries {prompt}).",
-            "title": "Code",
-            "type": "string"
+            "$ref": "#/components/schemas/ProblemCode",
+            "description": "Names the error. Absent on a 422 (a validation error): its types are in errors, which says where."
           },
           "detail": {
             "description": "One sentence fit to show users (English for now); errors holds the technical part.",
@@ -1389,6 +1396,25 @@
         ],
         "title": "Problem",
         "type": "object"
+      },
+      "ProblemCode": {
+        "description": "409: not_latest, not_answerable, stale_run, version_conflict, not_allowed. 429: too_many_active. 501: not_implemented, while a route is a stub. 404: no_workspace, no_thread, no_run, no_entry, no_step, no_revision; each operation's 404 lists the ones it can answer. stale_run: the run was made by an earlier version of sightline and can't be changed any more; ask again for a fresh answer (errors[0].ctx carries {prompt}).",
+        "enum": [
+          "not_latest",
+          "not_answerable",
+          "stale_run",
+          "version_conflict",
+          "not_allowed",
+          "too_many_active",
+          "not_implemented",
+          "no_workspace",
+          "no_thread",
+          "no_run",
+          "no_entry",
+          "no_step",
+          "no_revision"
+        ],
+        "type": "string"
       },
       "Rating": {
         "enum": [
@@ -1419,6 +1445,7 @@
                 "type": "null"
               }
             ],
+            "description": "Set for kind default; null for the other kinds.",
             "title": "Choices"
           },
           "chosen_option": {
@@ -1456,7 +1483,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Set for kind gap; null for the other kinds."
           },
           "id": {
             "title": "Id",
@@ -1519,6 +1547,7 @@
             "type": "string"
           },
           "version": {
+            "description": "Only a review (approve, reject, reopen, edit) moves it. Demand updates and repeated proposals do not, so a run asking for the entry never causes a version_conflict.",
             "title": "Version",
             "type": "integer"
           },
@@ -1549,6 +1578,8 @@
           "updated_at",
           "reviewed_by",
           "reviewed_at",
+          "gap",
+          "choices",
           "chosen_option"
         ],
         "title": "RegistryEntry",
@@ -1568,6 +1599,7 @@
                 "type": "null"
               }
             ],
+            "description": "Set for kind default; null for the other kinds.",
             "title": "Choices"
           },
           "chosen_option": {
@@ -1605,7 +1637,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Set for kind gap; null for the other kinds."
           },
           "history": {
             "description": "Its changes, oldest first.",
@@ -1689,6 +1722,7 @@
             "type": "string"
           },
           "version": {
+            "description": "Only a review (approve, reject, reopen, edit) moves it. Demand updates and repeated proposals do not, so a run asking for the entry never causes a version_conflict.",
             "title": "Version",
             "type": "integer"
           },
@@ -1719,6 +1753,8 @@
           "updated_at",
           "reviewed_by",
           "reviewed_at",
+          "gap",
+          "choices",
           "chosen_option",
           "runs",
           "runs_total",
@@ -1856,7 +1892,7 @@
                 "type": "null"
               }
             ],
-            "description": "The id of the support whose chart is chart; null without a storyline.",
+            "description": "The id of the support that Result.chart draws (drawn = main). It is set whenever storyline is set, also when chart is null because the run failed after gather; null without a storyline.",
             "title": "Lead"
           },
           "notes": {
@@ -1918,7 +1954,7 @@
             "description": "null until the analysis runs (SIGHTLINE_ANALYSIS=route), and for a run that ended before gather."
           },
           "supports": {
-            "description": "At most five, in key_line order; empty until the analysis runs.",
+            "description": "At most five: those with a point in key_line order, then those whose point is null, in gather's order. Empty until the analysis runs.",
             "items": {
               "$ref": "#/components/schemas/Support"
             },
@@ -2043,7 +2079,7 @@
         "properties": {
           "follows": {
             "$ref": "#/components/schemas/FollowRequest",
-            "description": "The follow-up this revision sends: one of the follow_ups of the thread's latest run."
+            "description": "The follow-up this revision sends: one of the follow_ups of the thread's latest run, when that run is complete."
           },
           "message": {
             "description": "The revision's text; with follows, the follow-up's question verbatim.",
@@ -2052,7 +2088,7 @@
             "type": "string"
           },
           "via": {
-            "description": "Where a revision without follows came from (an implicit signal): typed in the composer, or one of a clarify run's nearest questions; composer when left out. Free text sent with answerCard is a revision too, and the backend marks it card text itself.",
+            "description": "Where a revision without follows came from (an implicit signal): typed in the composer, or one of a clarify run's nearest questions; composer when left out. Never sent with follows (422 via_with_follows). Free text sent with answerCard is a revision too, and the backend marks it card text itself.",
             "enum": [
               "composer",
               "nearest"
@@ -2382,7 +2418,7 @@
         "type": "object"
       },
       "RunView": {
-        "description": "A run in full. A run cancelled, failed or superseded before gather has storyline null\nand supports and follow_ups empty, and keeps its finished steps. A run that fails after\ngather may have a storyline while its chart is null.",
+        "description": "A run in full. A run cancelled, failed or superseded before gather has storyline null\nand supports and follow_ups empty, and keeps its steps (see steps). A run that fails after\ngather may have a storyline while its chart is null.",
         "properties": {
           "card": {
             "anyOf": [
@@ -2511,7 +2547,7 @@
                 "type": "null"
               }
             ],
-            "description": "What sightline understood, and only that. Every run that got past bind has one, clarify and asking runs included; the core tells it right after bind. Null before bind.",
+            "description": "What sightline understood, and only that. Every run that got past bind has one, clarify and asking runs included; the core tells it right after bind. Null before bind. The restatement never carries a \"Defined as ...\" clause; a definition's wording and its approval live only in definitions[].",
             "title": "Restatement"
           },
           "result": {
@@ -2564,10 +2600,10 @@
                 "type": "null"
               }
             ],
-            "description": "The step under way; null when none is, and always until the analysis runs."
+            "description": "The step under way; null when none is, always until the analysis runs, and whenever the run's status is terminal or asking."
           },
           "steps": {
-            "description": "The steps in the order they started, the one under way included; empty until the analysis runs.",
+            "description": "The steps in the order they started, the one under way included; empty until the analysis runs. A step under way when the run ends (cancelled, failed or superseded) stays here with elapsed_ms set to the time until the end, verdict, sql and row_count null, and cached false. The stream tells no step.finished for it, so only getRun has that elapsed_ms.",
             "items": {
               "$ref": "#/components/schemas/StepRecord"
             },
@@ -2856,7 +2892,7 @@
             "type": "string"
           },
           "stage": {
-            "description": "A stage name only; the words for it belong to the client, and a name the client does not know gets a generic label. Within one pass the phases are contiguous and the stages run in this order: situate, recall, define, ground, abstract, plan, bind (phase understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to analyse) go back. Side states: clarify, reconsider and repair (understand), restore (present), ask and propose (the phase of the stage they follow). Propose is fast and makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route.",
+            "description": "A stage name only; the words for it belong to the client, and a name the client does not know gets a generic label. Within one pass the phases are contiguous and the stages run in this order: situate, recall, define, ground, abstract, plan, bind (phase understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to analyse) go back. Side states: clarify, reconsider and repair (understand), restore (present), ask and propose (the phase of the stage they follow). Propose runs before an ask waits, so the card is not delayed; it is fast and makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route.",
             "title": "Stage",
             "type": "string"
           },
@@ -2893,7 +2929,7 @@
             "type": "string"
           },
           "stage": {
-            "description": "A stage name only; the words for it belong to the client, and a name the client does not know gets a generic label. Within one pass the phases are contiguous and the stages run in this order: situate, recall, define, ground, abstract, plan, bind (phase understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to analyse) go back. Side states: clarify, reconsider and repair (understand), restore (present), ask and propose (the phase of the stage they follow). Propose is fast and makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route.",
+            "description": "A stage name only; the words for it belong to the client, and a name the client does not know gets a generic label. Within one pass the phases are contiguous and the stages run in this order: situate, recall, define, ground, abstract, plan, bind (phase understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to analyse) go back. Side states: clarify, reconsider and repair (understand), restore (present), ask and propose (the phase of the stage they follow). Propose runs before an ask waits, so the card is not delayed; it is fast and makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route.",
             "title": "Stage",
             "type": "string"
           },
@@ -2932,7 +2968,7 @@
             "type": "string"
           },
           "stage": {
-            "description": "A stage name only; the words for it belong to the client, and a name the client does not know gets a generic label. Within one pass the phases are contiguous and the stages run in this order: situate, recall, define, ground, abstract, plan, bind (phase understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to analyse) go back. Side states: clarify, reconsider and repair (understand), restore (present), ask and propose (the phase of the stage they follow). Propose is fast and makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route.",
+            "description": "A stage name only; the words for it belong to the client, and a name the client does not know gets a generic label. Within one pass the phases are contiguous and the stages run in this order: situate, recall, define, ground, abstract, plan, bind (phase understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to analyse) go back. Side states: clarify, reconsider and repair (understand), restore (present), ask and propose (the phase of the stage they follow). Propose runs before an ask waits, so the card is not delayed; it is fast and makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route.",
             "title": "Stage",
             "type": "string"
           },
@@ -2952,6 +2988,7 @@
         "type": "object"
       },
       "StepFinishedEvent": {
+        "description": "A step ended. With its step.started it carries every field of StepRecord, so a\nRunView folded from the stream equals getRun, except for a step cut off by the run's end\n(RunView.steps): no step.finished comes for it, so its elapsed_ms is only in getRun,\nwhich a client refetches after a terminal run.status.",
         "properties": {
           "at": {
             "format": "date-time",
@@ -2970,9 +3007,33 @@
           "role": {
             "$ref": "#/components/schemas/StepRole"
           },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the step has no query; 0 when its query returned no rows.",
+            "title": "Row Count"
+          },
           "run_id": {
             "title": "Run Id",
             "type": "string"
+          },
+          "sql": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the step ran no SQL.",
+            "title": "Sql"
           },
           "stage": {
             "description": "The stage the step ran in.",
@@ -3008,7 +3069,9 @@
           "cached",
           "at",
           "elapsed_ms",
-          "verdict"
+          "verdict",
+          "sql",
+          "row_count"
         ],
         "title": "StepFinishedEvent",
         "type": "object"
@@ -3017,7 +3080,7 @@
         "description": "A step of the analysis, as it ran or runs.",
         "properties": {
           "cached": {
-            "description": "Its rows came from the cache; no query ran.",
+            "description": "Its rows came from the cache; no query ran. False while the step runs.",
             "title": "Cached",
             "type": "boolean"
           },
@@ -3055,7 +3118,7 @@
                 "type": "null"
               }
             ],
-            "description": "Null while the step runs or when it got no rows.",
+            "description": "Null while the step runs or when it has no query; 0 when its query returned no rows.",
             "title": "Row Count"
           },
           "sql": {
@@ -3067,7 +3130,7 @@
                 "type": "null"
               }
             ],
-            "description": "Null when the step ran no SQL.",
+            "description": "Null while the step runs or when the step ran no SQL.",
             "title": "Sql"
           },
           "stage": {
@@ -3186,11 +3249,15 @@
         "type": "string"
       },
       "StepStartedEvent": {
+        "description": "A step started. With its step.finished it carries every field of StepRecord, so a\nRunView folded from the stream equals getRun, except for a step cut off by the run's end\n(RunView.steps): no step.finished comes for it, so its elapsed_ms is only in getRun,\nwhich a client refetches after a terminal run.status.",
         "properties": {
           "at": {
             "format": "date-time",
             "title": "At",
             "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/StepRole"
           },
           "run_id": {
             "title": "Run Id",
@@ -3215,6 +3282,7 @@
           "run_id",
           "stage",
           "step",
+          "role",
           "at"
         ],
         "title": "StepStartedEvent",
@@ -3516,6 +3584,7 @@
                 "type": "null"
               }
             ],
+            "description": "Null when the user has none.",
             "title": "Email"
           },
           "id": {
@@ -3529,7 +3598,8 @@
         },
         "required": [
           "id",
-          "name"
+          "name",
+          "email"
         ],
         "title": "User",
         "type": "object"
@@ -3585,7 +3655,7 @@
   "info": {
     "description": "Ask a question of a workspace's warehouse, revise it by prompt, and follow the run live. A thread is one question plus the runs after it: revisions typed by prompt, follow-ups and nearest questions sent from the transcript, and take-backs; each is one run. Runs are asynchronous: creating one answers 202 with its id, and progress arrives on the run's event stream. Within one pass the phases are contiguous (understand, analyse, present); only reconsider, repair and the hole loop go back, e.g. a reconsider loop can start abstract again after validate, with the phase back at understand. Side states (clarify, ask, propose, reconsider, repair, restore) can appear as a stage. A run can go from complete back to queued under the same id (an answer to a beside-the-chart card, a chart switch); a run.status queued after running means a worker restarted it. Every error is a Problem. There is no auth in v1: calls are same-origin and carry no header.\n",
     "title": "sightline API",
-    "version": "0.2.0"
+    "version": "0.2.1"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -3716,7 +3786,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace: code no_workspace."
           },
           "422": {
             "content": {
@@ -3783,7 +3853,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_entry."
           },
           "501": {
             "content": {
@@ -3851,7 +3921,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_entry."
           },
           "409": {
             "content": {
@@ -3929,7 +3999,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_run."
           },
           "501": {
             "content": {
@@ -3946,7 +4016,7 @@
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/answers": {
       "post": {
-        "description": "Answer the choice card. A null answer means \"decide for me\": the point keeps its chosen option, and by stays s1 or rules. Free text becomes a revision of the thread (marked card text), which starts a new run. Answers are taken on the thread's latest run while it is asking, or when it is complete with a card that does not block; the run then goes back to queued under the same run_id and keeps its rating, though a follow-up may vanish when it presents again. 409: not_latest, not_answerable, or stale_run (the run was made by an earlier version of sightline and can't be changed any more; ask again for a fresh answer; errors[0].ctx carries {prompt}).",
+        "description": "Answer the choice card. A null answer (\"decide for me\") keeps the chosen option (an approved default, else System 1's lean, else the rules' default), and by stays default, s1 or rules. Free text becomes a revision of the thread (marked card text), which starts a new run. Answers are taken on the thread's latest run while it is asking, or when it is complete with a card that does not block; the run then goes back to queued under the same run_id and keeps its rating, though a follow-up may vanish when it presents again. 409: not_latest, not_answerable, or stale_run (the run was made by an earlier version of sightline and can't be changed any more; ask again for a fresh answer; errors[0].ctx carries {prompt}).",
         "operationId": "answerCard",
         "parameters": [
           {
@@ -3997,7 +4067,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_run."
           },
           "409": {
             "content": {
@@ -4031,6 +4101,7 @@
             "headers": {
               "Retry-After": {
                 "description": "Seconds to wait before trying again.",
+                "required": true,
                 "schema": {
                   "type": "integer"
                 }
@@ -4052,7 +4123,7 @@
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/cancel": {
       "post": {
-        "description": "Stop a run that is queued, running or asking; it ends with status cancelled. Idempotent: a run that has already ended stays as it is, and the answer is the same 202.",
+        "description": "Stop a run that is queued, running or asking; it ends with status cancelled. Idempotent: on a run that has already ended the answer is the same 202; nothing changes and no event follows.",
         "operationId": "cancelRun",
         "parameters": [
           {
@@ -4093,7 +4164,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_run."
           },
           "501": {
             "content": {
@@ -4161,7 +4232,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_run."
           },
           "409": {
             "content": {
@@ -4195,6 +4266,7 @@
             "headers": {
               "Retry-After": {
                 "description": "Seconds to wait before trying again.",
+                "required": true,
                 "schema": {
                   "type": "integer"
                 }
@@ -4216,7 +4288,7 @@
     },
     "/api/v1/workspaces/{ws}/runs/{run_id}/events": {
       "get": {
-        "description": "Server-sent events. Each frame is `id: <n>`, `event: <type>` and `data: <RunEvent as JSON>`; ids increase per run. The stream opens with a `retry: 3000` line, so a client reconnects after 3 s. Reconnect with `Last-Event-ID` to get only the frames after it (ids are per-run integers from 1, the same counter as RunView.last_event_id); `?last_event_id=` is the fallback when the header is absent, e.g. on the first connect after getRun. A comment line `: ping` comes every 15 s. The stream ends after a terminal run.status (complete, clarify, failed, cancelled, superseded) or after asking.\n\nA complete run tells, in this order: run.status queued, then running; stage.started and stage.finished per stage, with step.started and step.finished inside analyse; restatement right after bind, and again when the text changes; chart after render, the main chart first, then each small chart with its support_id; card, clarify when it applies, result; the terminal run.status. The storyline and supports ride only on the result event and RunView.result, the follow-ups only on RunView: getRun has them after the terminal run.status.",
+        "description": "Server-sent events. Each frame is `id: <n>`, `event: <type>` and `data: <RunEvent as JSON>`; ids increase per run. The stream opens with a `retry: 3000` line, so a client reconnects after 3 s. Reconnect with `Last-Event-ID` to get only the frames after it (ids are per-run integers from 1, the same counter as RunView.last_event_id); `?last_event_id=` is the fallback when the header is absent, e.g. on the first connect after getRun, and a malformed one is a 422. A comment line `: ping` comes every 15 s. The stream ends after a terminal run.status (complete, clarify, failed, cancelled, superseded) or after asking.\n\nA complete run tells, in this order: run.status queued, then running; stage.started and stage.finished per stage, with step.started and step.finished inside the analyse stage (not the whole analyse phase); restatement right after bind, and again when the text changes; chart after render, the main chart first, then each small chart with its support_id; card when it applies, result; the terminal run.status. The storyline and supports ride only on the result event and RunView.result, the follow-ups only on RunView: getRun has them after the terminal run.status.\n\nThe other endings: a failed run tells the error event just before run.status failed; a clarify run tells a clarify event, then run.status clarify, and no result event; an asking run tells the card event, then run.status asking; a cancelled or superseded run tells only its run.status.",
         "operationId": "runEvents",
         "parameters": [
           {
@@ -4278,7 +4350,17 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_run."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request is not valid; errors says where."
           },
           "501": {
             "content": {
@@ -4339,7 +4421,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_run."
           },
           "422": {
             "content": {
@@ -4416,7 +4498,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_run or no_step."
           },
           "501": {
             "content": {
@@ -4465,7 +4547,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace: code no_workspace."
           },
           "501": {
             "content": {
@@ -4482,7 +4564,7 @@
     },
     "/api/v1/workspaces/{ws}/signals": {
       "post": {
-        "description": "A beacon from the client, stored as a raw event that nothing interprets in v1: thread_opened when the user opens a thread.",
+        "description": "A beacon from the client, stored as a raw event that nothing interprets in v1: thread_opened when the user opens a thread. 404 with code no_thread when thread_id names no thread of the workspace.",
         "operationId": "sendSignal",
         "parameters": [
           {
@@ -4517,7 +4599,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_thread."
           },
           "422": {
             "content": {
@@ -4620,7 +4702,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace: code no_workspace."
           },
           "422": {
             "content": {
@@ -4687,7 +4769,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace: code no_workspace."
           },
           "422": {
             "content": {
@@ -4711,6 +4793,7 @@
             "headers": {
               "Retry-After": {
                 "description": "Seconds to wait before trying again.",
+                "required": true,
                 "schema": {
                   "type": "integer"
                 }
@@ -4772,7 +4855,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace or no_thread."
           },
           "501": {
             "content": {
@@ -4789,7 +4872,7 @@
     },
     "/api/v1/workspaces/{ws}/threads/{thread_id}/revisions": {
       "post": {
-        "description": "Revise the question by prompt, or send a follow-up or a nearest question from the transcript. Post it directly, never /cancel first: a run of this thread still active is superseded (it ends with status superseded). Cancel is cooperative at stage boundaries, so the old run may emit events for up to a minute; clients drop events of runs that are not the thread's active run.\n\nEach run answers an anchor, which is the question or the latest follow-up or nearest question in its chain, plus the revisions typed after that anchor. A typed revision after a follow-up revises the follow-up. Any standalone question sent from the transcript (a follow-up, a nearest question) becomes the new anchor; composer and card-text revisions never do. A take-back re-runs revision n-1 and copies its anchor; taking back a follow-up re-runs the parent's reading.\n\nWith follows: follows.run_id must be the thread's latest run, else 409 not_latest. That run must be complete and follow_up_id one of its follow_ups, else 409 not_answerable. Follow-up ids are unique per run and survive a chart pick, but may vanish after a side-card answer re-presents the run, and a vanished id is not_answerable too. message must equal that follow-up's question, else 422 with errors[0] {loc: [body, message], type: follow_up_mismatch}. A clarify run has no answer, so its nearest questions go with via nearest and no follows.",
+        "description": "Revise the question by prompt, or send a follow-up or a nearest question from the transcript. Post it directly, never /cancel first: a run of this thread still active is superseded (it ends with status superseded). Cancel is cooperative at stage boundaries, so the old run may emit events for up to a minute; clients drop events of runs that are not the thread's active run.\n\nEach run answers an anchor, which is the question or the latest follow-up or nearest question in its chain, plus the revisions typed after that anchor. A typed revision after a follow-up revises the follow-up. Any standalone question sent from the transcript (a follow-up, a nearest question) becomes the new anchor; composer and card-text revisions never do. A take-back re-runs revision n-1 and copies its anchor; taking back a follow-up re-runs the parent's reading.\n\nHow a follow-up is sent depends on the status of the run that offered it, not on the follow-up's kind. A clarify run has no answer, so its follow-ups (its nearest questions) go with via nearest and no follows; a complete run's follow-ups, kind nearest included, go with follows. via is never sent with follows: 422 with errors[0] {loc: [body, via], type: via_with_follows}.\n\nWith follows: follows.run_id must name a run of this thread, else 404 no_run, and be the thread's latest run, else 409 not_latest. That run must be complete and follow_up_id one of its follow_ups, else 409 not_answerable. Follow-up ids are unique per run and survive a chart pick, but may vanish after a side-card answer re-presents the run, and a vanished id is not_answerable too. message must equal that follow-up's question, else 422 with errors[0] {loc: [body, message], type: follow_up_mismatch}. A follow-up offered by a run an earlier version of sightline made is allowed, never stale_run: its question stands on its own, so the new run answers it with today's core.\n\nWith via nearest: the thread's latest run must be a clarify run and message the question of one of its follow_ups (kind nearest), else 409 not_answerable.",
         "operationId": "reviseThread",
         "parameters": [
           {
@@ -4840,7 +4923,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread or no_run."
           },
           "409": {
             "content": {
@@ -4874,6 +4957,7 @@
             "headers": {
               "Retry-After": {
                 "description": "Seconds to wait before trying again.",
+                "required": true,
                 "schema": {
                   "type": "integer"
                 }
@@ -4895,7 +4979,7 @@
     },
     "/api/v1/workspaces/{ws}/threads/{thread_id}/revisions/{n}": {
       "delete": {
-        "description": "Take back revision n (n >= 1 is the thread's nth run after the question). Like reviseThread, it supersedes a run of this thread still active and starts a new run (origin take_back, takes_back n), whose prompt is the text taken back. It re-runs revision n-1 with that revision's anchor; taking back a follow-up re-runs the parent's reading.",
+        "description": "Take back revision n (n >= 1 is the thread's nth run after the question). Like reviseThread, it supersedes a run of this thread still active and starts a new run (origin take_back, takes_back n), whose prompt is the text taken back. It re-runs revision n-1 with that revision's anchor; taking back a follow-up re-runs the parent's reading. 404 with code no_revision when n names no revision: beyond the latest, or one already taken back.",
         "operationId": "takeBackRevision",
         "parameters": [
           {
@@ -4946,7 +5030,7 @@
                 }
               }
             },
-            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread, no_run, no_entry or no_step."
+            "description": "No such workspace, or nothing by that id in it: code no_workspace, no_thread or no_revision."
           },
           "422": {
             "content": {
@@ -4970,6 +5054,7 @@
             "headers": {
               "Retry-After": {
                 "description": "Seconds to wait before trying again.",
+                "required": true,
                 "schema": {
                   "type": "integer"
                 }

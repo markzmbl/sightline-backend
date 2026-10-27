@@ -12,7 +12,7 @@ The plan, with its decisions, is
 
 This repo holds the contract only:
 
-- `src/sightline_backend/contract.py`: the API's pydantic models (contract v0.2), started
+- `src/sightline_backend/contract.py`: the API's pydantic models (contract v0.2.1), started
   from the frontend's `web/contract/openapi.draft.yaml` with its schema and operation
   names, and changed since by agreement with the frontend session.
 - `src/sightline_backend/api/`: every route with its path, method, operationId, status

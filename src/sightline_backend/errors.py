@@ -18,34 +18,46 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from sightline_backend.contract import ErrorItem, Problem
+from sightline_backend.contract import ErrorItem, Problem, ProblemCode
 
 # the backend's own details, each one sentence a user can read
 NOT_BUILT = "This part of sightline is not built yet."
 INVALID = "The request is not valid."
 CRASHED = "Something went wrong on our side."
+BUSY = "Too many questions are being answered in this workspace right now; try again shortly."
 
 
 class ProblemError(Exception):
-    """An error the API answers with a Problem body; `code` names it for the client."""
+    """An error the API answers with a Problem body; `code` names it for the client, and
+    `headers` go with the response (Retry-After on a 429)."""
 
     def __init__(
         self,
         status: int,
         detail: str,
-        code: str | None = None,
+        code: ProblemCode | None = None,
         errors: list[ErrorItem] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> None:
         super().__init__(detail)
         self.status = status
         self.detail = detail
         self.code = code
         self.errors = errors
+        self.headers = headers
 
 
 def not_implemented() -> ProblemError:
     """What a route answers until its phase builds it."""
     return ProblemError(501, NOT_BUILT, code="not_implemented")
+
+
+def too_many_active(retry_after: int) -> ProblemError:
+    """The 429 of a route that starts a run while the workspace has as many runs queued,
+    running or asking as it allows; `retry_after` is in seconds."""
+    return ProblemError(
+        429, BUSY, code="too_many_active", headers={"Retry-After": str(retry_after)}
+    )
 
 
 def problem_response(
@@ -73,7 +85,9 @@ def _item(error: dict[str, Any]) -> ErrorItem:
 
 async def _problem_error(request: Request, exc: ProblemError) -> Response:
     return problem_response(
-        exc.status, Problem(detail=exc.detail, code=exc.code, errors=exc.errors)
+        exc.status,
+        Problem(detail=exc.detail, code=exc.code, errors=exc.errors),
+        headers=exc.headers,
     )
 
 

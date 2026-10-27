@@ -2,12 +2,13 @@
 
 They started from sightline-web's contract/openapi.draft.yaml with its schema names, and
 carry the changes agreed with the frontend session since (contract v0.2: follow-ups in the
-same thread, steps, the storyline and its supports, typed errors) and the plan's additions
-(the plan's "API contract" section). They are not the core's artifacts. Those feed System
-2's prompts and never change to suit the API, so the backend projects them into these
-shapes: the card from AskReport and DecisionPoint, clarify from ClarificationReport, the
-chart options from ChartCandidate, the result from ExecutionArtifact and VisPlan.findings,
-the steps from the analysis and the storyline, supports and follow-ups from gather.
+same thread, steps, the storyline and its supports, typed errors; v0.2.1: the answers to the
+frontend's check of v0.2) and the plan's additions (the plan's "API contract" section).
+They are not the core's artifacts. Those feed System 2's prompts and never change to suit
+the API, so the backend projects them into these shapes: the card from AskReport and
+DecisionPoint, clarify from ClarificationReport, the chart options from ChartCandidate, the
+result from ExecutionArtifact and VisPlan.findings, the steps from the analysis and the
+storyline, supports and follow-ups from gather.
 
 Descriptions say what the core guarantees today. The analysis (steps 5 and 6) runs only
 under SIGHTLINE_ANALYSIS=route; until then storyline is null, and supports, steps and the
@@ -23,7 +24,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, BaseModel, Field, RootModel
+from pydantic import AfterValidator, BaseModel, Field, RootModel, ValidationInfo, field_validator
 from pydantic_core import PydanticCustomError
 
 
@@ -73,14 +74,32 @@ Prompt = Annotated[str, Field(min_length=1), AfterValidator(_no_nul)]
 class ErrorItem(BaseModel):
     """FastAPI's error shape, technical: for the client to act on, not to show users. The
     backend's own types: word_collision (ctx {word, collides_with}); follow_up_mismatch (a
-    revision's message is not the question of the follow-up it sends); stale_run (loc
-    [path, run_id], ctx {prompt}: the run's prompt, to ask again with).
+    revision's message is not the question of the follow-up it sends); via_with_follows (loc
+    [body, via]: a revision sent via together with follows); stale_run (loc [path, run_id],
+    ctx {prompt}: the run's prompt, to ask again with).
     """
 
     loc: list[str | int]
     msg: str
     type: str
     ctx: dict[str, Any] | None = _optional()
+
+
+type ProblemCode = Annotated[
+    Literal[
+        "not_latest", "not_answerable", "stale_run", "version_conflict", "not_allowed",
+        "too_many_active", "not_implemented", "no_workspace", "no_thread", "no_run", "no_entry",
+        "no_step", "no_revision",
+    ],
+    Field(
+        description="409: not_latest, not_answerable, stale_run, version_conflict, "
+        "not_allowed. 429: too_many_active. 501: not_implemented, while a route is a stub. "
+        "404: no_workspace, no_thread, no_run, no_entry, no_step, no_revision; each "
+        "operation's 404 lists the ones it can answer. stale_run: the run was made by an "
+        "earlier version of sightline and can't be changed any more; ask again for a fresh "
+        "answer (errors[0].ctx carries {prompt})."
+    ),
+]
 
 
 class Problem(BaseModel):
@@ -90,13 +109,9 @@ class Problem(BaseModel):
         description="One sentence fit to show users (English for now); errors holds the "
         "technical part."
     )
-    code: str | None = _optional(
-        "Names the error. 404: no_workspace, no_thread, no_run, no_entry, no_step. 409: "
-        "not_latest, not_answerable, stale_run, version_conflict, not_allowed. 429: "
-        "too_many_active. 501: not_implemented, while a route is a stub. A 422 has no code; "
-        "errors says where. stale_run: the run was made by an earlier version of sightline "
-        "and can't be changed any more; ask again for a fresh answer (errors[0].ctx carries "
-        "{prompt})."
+    code: ProblemCode | None = _optional(
+        "Names the error. Absent on a 422 (a validation error): its types are in errors, "
+        "which says where."
     )
     errors: list[ErrorItem] | None = _optional(
         "Technical: what went wrong and where, for the client, not for users."
@@ -114,7 +129,7 @@ class Health(BaseModel):
 class User(BaseModel):
     id: str
     name: str
-    email: str | None = _optional(null=True)
+    email: str | None = Field(description="Null when the user has none.")
 
 
 type WorkspaceRole = Annotated[
@@ -225,8 +240,9 @@ STAGE_NAMES = (
     "understand); enrich, derive, query, analyse, gather (phase analyse); idiom, render, "
     "perceive, validate (phase present). Only reconsider, repair and the hole loop (gather back to "
     "analyse) go back. Side states: clarify, reconsider and repair (understand), restore "
-    "(present), ask and propose (the phase of the stage they follow). Propose is fast and "
-    "makes no model call. Plan, analyse and gather run only under SIGHTLINE_ANALYSIS=route."
+    "(present), ask and propose (the phase of the stage they follow). Propose runs before an "
+    "ask waits, so the card is not delayed; it is fast and makes no model call. Plan, analyse "
+    "and gather run only under SIGHTLINE_ANALYSIS=route."
 )
 
 STEP_LABEL = (
@@ -289,8 +305,9 @@ class Card(BaseModel):
     block, after the drawing, applies the same rule to the form, point and detail steps, and
     adds the points an approved default settled (by = default). Every point in points is
     asked; open keeps its meaning (nobody was sure), so under ask=always a point can be
-    asked with open = false. A null answer ("decide for me") keeps the chosen option,
-    System 1's lean or else the rules' default, and by stays s1 or rules.
+    asked with open = false. A null answer ("decide for me") keeps the chosen option (an
+    approved default, else System 1's lean, else the rules' default), and by stays default,
+    s1 or rules.
     """
 
     blocking: bool = Field(
@@ -538,10 +555,13 @@ class Result(BaseModel):
         "that ended before gather."
     )
     lead: str | None = Field(
-        description="The id of the support whose chart is chart; null without a storyline."
+        description="The id of the support that Result.chart draws (drawn = main). It is set "
+        "whenever storyline is set, also when chart is null because the run failed after "
+        "gather; null without a storyline."
     )
     supports: list[Support] = Field(
-        description="At most five, in key_line order; empty until the analysis runs."
+        description="At most five: those with a point in key_line order, then those whose "
+        "point is null, in gather's order. Empty until the analysis runs."
     )
 
 
@@ -599,9 +619,14 @@ class StepRecord(BaseModel):
     verdict: StepVerdict | None = Field(
         description="Null while the step runs or when it reached no verdict."
     )
-    cached: bool = Field(description="Its rows came from the cache; no query ran.")
-    sql: str | None = Field(description="Null when the step ran no SQL.")
-    row_count: int | None = Field(description="Null while the step runs or when it got no rows.")
+    cached: bool = Field(
+        description="Its rows came from the cache; no query ran. False while the step runs."
+    )
+    sql: str | None = Field(description="Null while the step runs or when the step ran no SQL.")
+    row_count: int | None = Field(
+        description="Null while the step runs or when it has no query; 0 when its query "
+        "returned no rows."
+    )
 
 
 class StepResult(BaseModel):
@@ -641,7 +666,8 @@ class EntrySource(BaseModel):
 class Definition(BaseModel):
     """A definition the run used: a registry entry, approved or proposed, or one this run
     proposed. A proposed one answers at once, marked with its source, and a key user reviews
-    it later. That a definition is not yet approved is said here, never in the restatement.
+    it later. The restatement never carries a "Defined as ..." clause; a definition's wording
+    and its approval live only in definitions[].
     """
 
     name: str = Field(description="The term it defines, as RegistryEntry.term names it.")
@@ -656,7 +682,9 @@ class Definition(BaseModel):
 
 RESTATEMENT = (
     "What sightline understood, and only that. Every run that got past bind has one, "
-    "clarify and asking runs included; the core tells it right after bind. Null before bind."
+    "clarify and asking runs included; the core tells it right after bind. Null before bind. "
+    "The restatement never carries a \"Defined as ...\" clause; a definition's wording and "
+    "its approval live only in definitions[]."
 )
 RESTATEMENT_TOLD = (
     "What sightline understood, and only that; told right after bind, and again when the "
@@ -668,7 +696,7 @@ UPDATED_AT = "Moves when a run is created or changes status; feedback and signal
 
 class RunView(BaseModel):
     """A run in full. A run cancelled, failed or superseded before gather has storyline null
-    and supports and follow_ups empty, and keeps its finished steps. A run that fails after
+    and supports and follow_ups empty, and keeps its steps (see steps). A run that fails after
     gather may have a storyline while its chart is null.
     """
 
@@ -709,11 +737,15 @@ class RunView(BaseModel):
         "questions (kind nearest), sent with via nearest and no follows."
     )
     step: AnalysisStep | None = Field(
-        description="The step under way; null when none is, and always until the analysis runs."
+        description="The step under way; null when none is, always until the analysis runs, "
+        "and whenever the run's status is terminal or asking."
     )
     steps: list[StepRecord] = Field(
         description="The steps in the order they started, the one under way included; empty "
-        "until the analysis runs."
+        "until the analysis runs. A step under way when the run ends (cancelled, failed or "
+        "superseded) stays here with elapsed_ms set to the time until the end, verdict, sql "
+        "and row_count null, and cached false. The stream tells no step.finished for it, so "
+        "only getRun has that elapsed_ms."
     )
     timings: list[StageTiming] = Field(
         description="One entry per stage.started, in event id order, side states included; a "
@@ -808,19 +840,31 @@ class FollowRequest(BaseModel):
 
 
 class Revise(BaseModel):
+    # follows comes before via, so that via's check sees it
     message: Prompt = Field(
         description="The revision's text; with follows, the follow-up's question verbatim."
     )
+    follows: FollowRequest | None = _optional(
+        "The follow-up this revision sends: one of the follow_ups of the thread's latest run, "
+        "when that run is complete."
+    )
     via: Literal["composer", "nearest"] = _optional(
         "Where a revision without follows came from (an implicit signal): typed in the "
-        "composer, or one of a clarify run's nearest questions; composer when left out. Free "
-        "text sent with answerCard is a revision too, and the backend marks it card text "
-        "itself.",
+        "composer, or one of a clarify run's nearest questions; composer when left out. Never "
+        "sent with follows (422 via_with_follows). Free text sent with answerCard is a "
+        "revision too, and the backend marks it card text itself.",
         default="composer",
     )
-    follows: FollowRequest | None = _optional(
-        "The follow-up this revision sends: one of the follow_ups of the thread's latest run."
-    )
+
+    @field_validator("via")
+    @classmethod
+    def _not_with_follows(cls, via: str, info: ValidationInfo) -> str:
+        # runs only when via is sent: a default is not validated
+        if info.data.get("follows") is not None:
+            raise PydanticCustomError(
+                "via_with_follows", "via must not be sent together with follows"
+            )
+        return via
 
 
 class Answers(BaseModel):
@@ -880,12 +924,18 @@ class RegistryEntry(BaseModel):
         "measure."
     )
     note: str | None
-    version: int
+    version: int = Field(
+        description="Only a review (approve, reject, reopen, edit) moves it. Demand updates "
+        "and repeated proposals do not, so a run asking for the entry never causes a "
+        "version_conflict."
+    )
     updated_at: datetime
     reviewed_by: str | None
     reviewed_at: datetime | None
-    gap: EntryGap | None = _optional(null=True)
-    choices: list[EntryChoice] | None = _optional(null=True)
+    gap: EntryGap | None = Field(description="Set for kind gap; null for the other kinds.")
+    choices: list[EntryChoice] | None = Field(
+        description="Set for kind default; null for the other kinds."
+    )
     chosen_option: str | None = Field(
         description="For kind default, the id of the option it chooses; null for the other kinds."
     )
@@ -905,7 +955,14 @@ type ReviewAction = Literal["approve", "reject", "reopen", "edit"]
 
 
 class EntryChange(BaseModel):
-    version: int = Field(description="The entry's version after the change.")
+    """One change of an entry. Only a review (approve, reject, reopen, edit) changes the
+    entry's version; demand updates and repeated proposals do not, so a run asking for the
+    entry never causes a version_conflict."""
+
+    version: int = Field(
+        description="The entry's version after the change: moved by a review, kept by "
+        "sightline's own changes."
+    )
     action: ReviewAction | Literal["proposed", "demand"] = Field(
         description="A key user's review, or sightline's own change: proposed (it proposed "
         "the entry) or demand (runs asked for it)."
@@ -982,10 +1039,20 @@ class StageStartedEvent(BaseModel):
     at: datetime
 
 
+# the core records System 2's calls as llm; the backend reports them as s2
+type CallKind = Annotated[
+    Literal["s1", "s2", "vision"],
+    Field(
+        description="s1: the System 1 model; s2: System 2, titles included; vision: a vision "
+        "model reading the chart's image."
+    ),
+]
+
+
 class CallInfo(BaseModel):
     """A model call a stage made."""
 
-    kind: str = Field(description="s1 (the System 1 model), llm (System 2, titles) or vision.")
+    kind: CallKind
     model: str
     seconds: float
     cost_usd: float | None = Field(description="Null when the provider reports no cost.")
@@ -1005,14 +1072,25 @@ class StageFinishedEvent(BaseModel):
 
 
 class StepStartedEvent(BaseModel):
+    """A step started. With its step.finished it carries every field of StepRecord, so a
+    RunView folded from the stream equals getRun, except for a step cut off by the run's end
+    (RunView.steps): no step.finished comes for it, so its elapsed_ms is only in getRun,
+    which a client refetches after a terminal run.status."""
+
     type: Literal["step.started"]
     run_id: str
     stage: str = Field(description="The stage the step runs in.")
     step: AnalysisStep
+    role: StepRole
     at: datetime
 
 
 class StepFinishedEvent(BaseModel):
+    """A step ended. With its step.started it carries every field of StepRecord, so a
+    RunView folded from the stream equals getRun, except for a step cut off by the run's end
+    (RunView.steps): no step.finished comes for it, so its elapsed_ms is only in getRun,
+    which a client refetches after a terminal run.status."""
+
     type: Literal["step.finished"]
     run_id: str
     stage: str = Field(description="The stage the step ran in.")
@@ -1022,6 +1100,10 @@ class StepFinishedEvent(BaseModel):
     at: datetime
     elapsed_ms: float
     verdict: StepVerdict | None = Field(description="null when the step reached no verdict.")
+    sql: str | None = Field(description="Null when the step ran no SQL.")
+    row_count: int | None = Field(
+        description="Null when the step has no query; 0 when its query returned no rows."
+    )
 
 
 class RestatementEvent(BaseModel):

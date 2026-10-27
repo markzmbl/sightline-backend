@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, get_args
 
 import pytest
 import yaml
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from sightline_backend.api import WS
+from sightline_backend.api import WS, problems
 from sightline_backend.api.events import EVENTS_PATH
 from sightline_backend.app import create_app, openapi_json
-from sightline_backend.contract import Problem, RunEvent
-from sightline_backend.errors import INVALID, NOT_BUILT
+from sightline_backend.contract import Problem, ProblemCode, RunEvent
+from sightline_backend.errors import BUSY, HANDLERS, INVALID, NOT_BUILT, too_many_active
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "contract" / "openapi.json"
@@ -78,6 +80,7 @@ SHAPES = {
     "Answers": "answers text?",
     "AskPolicy": "never|unsure|always",
     "CallInfo": "cost_usd from_cache kind model seconds",
+    "CallKind": "s1|s2|vision",
     "Card": "blocking points",
     "CardEvent": "card run_id type",
     "Cell": "string|integer|number|boolean|null",
@@ -117,11 +120,13 @@ SHAPES = {
     "Me": "last_workspace user workspaces",
     "Option": "hint id label",
     "Problem": "code? detail errors?",
+    "ProblemCode": "not_latest|not_answerable|stale_run|version_conflict|not_allowed|"
+    "too_many_active|not_implemented|no_workspace|no_thread|no_run|no_entry|no_step|no_revision",
     "Rating": "up|down",
     "RegistryCounts": "{string: integer}",
-    "RegistryEntry": "choices? chosen_option definition demand gap? id kind label note "
+    "RegistryEntry": "choices chosen_option definition demand gap id kind label note "
     "reviewed_at reviewed_by source status term updated_at version words",
-    "RegistryEntryDetail": "choices? chosen_option definition demand gap? history id kind label "
+    "RegistryEntryDetail": "choices chosen_option definition demand gap history id kind label "
     "note reviewed_at reviewed_by runs runs_total source status term updated_at version words",
     "RegistryKind": "measure|default|gap",
     "RegistryPage": "counts items kinds next_cursor",
@@ -157,11 +162,11 @@ SHAPES = {
     "StageFinishedEvent": "at calls? elapsed_ms phase run_id stage type",
     "StageStartedEvent": "at phase run_id stage type",
     "StageTiming": "elapsed_ms phase stage started_at",
-    "StepFinishedEvent": "at cached elapsed_ms role run_id stage step type verdict",
+    "StepFinishedEvent": "at cached elapsed_ms role row_count run_id sql stage step type verdict",
     "StepRecord": "cached elapsed_ms id label role row_count sql stage started_at verdict",
     "StepResult": "columns label row_count rows sql step_id truncated",
     "StepRole": "answer|probe|reference|denominator|comparison|decomposition|check|lookup",
-    "StepStartedEvent": "at run_id stage step type",
+    "StepStartedEvent": "at role run_id stage step type",
     "StepVerdict": "as_expected|contradicts|routine|inconclusive|no_effect|failed",
     "Storyline": "key_line top",
     "Support": "chart drawn id layer note point role text",
@@ -171,9 +176,30 @@ SHAPES = {
     "Thread": "created_at id latest locale question runs updated_at",
     "ThreadPage": "items next_cursor",
     "ThreadSummary": "active_run_id id question restatement revisions status updated_at",
-    "User": "email? id name",
+    "User": "email id name",
     "Workspace": "id name pack role starters",
     "WorkspaceRole": "key_user|member",
+}
+# The 404 codes each operation can answer, as its 404 response names them; an operation
+# left out lists no 404.
+NOT_FOUND = {
+    "getSchema": "no_workspace",
+    "listThreads": "no_workspace",
+    "createThread": "no_workspace",
+    "getThread": "no_workspace no_thread",
+    "reviseThread": "no_workspace no_thread no_run",
+    "takeBackRevision": "no_workspace no_thread no_revision",
+    "getRun": "no_workspace no_run",
+    "getRunStep": "no_workspace no_run no_step",
+    "answerCard": "no_workspace no_run",
+    "cancelRun": "no_workspace no_run",
+    "pickChart": "no_workspace no_run",
+    "giveFeedback": "no_workspace no_run",
+    "runEvents": "no_workspace no_run",
+    "listRegistryEntries": "no_workspace",
+    "getRegistryEntry": "no_workspace no_entry",
+    "reviewRegistryEntry": "no_workspace no_entry",
+    "sendSignal": "no_workspace no_thread",
 }
 
 DOC = create_app().openapi()
@@ -328,6 +354,58 @@ def test_every_stub_lists_its_501_and_every_429_its_retry_after() -> None:
             headers = responses["429"].get("headers", {})
             assert set(headers) == {"Retry-After"}, f"{method} {path}"
             assert headers["Retry-After"]["schema"] == {"type": "integer"}, f"{method} {path}"
+            assert headers["Retry-After"]["required"] is True, f"{method} {path}"
+
+
+def test_every_404_names_only_the_codes_its_operation_answers() -> None:
+    codes = set(get_args(get_args(ProblemCode.__value__)[0]))
+    found = {}
+    for _, _, op in _operations(DOC):
+        if "404" in op["responses"]:
+            named = re.findall(r"\bno_[a-z]+", op["responses"]["404"]["description"])
+            assert set(named) <= codes, op["operationId"]
+            found[op["operationId"]] = " ".join(named)
+    assert found == NOT_FOUND
+
+
+def test_a_route_lists_404_exactly_when_it_names_its_codes() -> None:
+    with pytest.raises(ValueError, match="not_found"):
+        problems(404, 501)
+    with pytest.raises(ValueError, match="not_found"):
+        problems(501, not_found=("no_run",))
+
+
+@pytest.mark.parametrize(
+    ("codes", "description"),
+    [
+        (("no_workspace",), "No such workspace: code no_workspace."),
+        (("no_run",), "No such workspace, or nothing by that id in it: code no_run."),
+        (
+            ("no_workspace", "no_run"),
+            "No such workspace, or nothing by that id in it: code no_workspace or no_run.",
+        ),
+        (
+            ("no_workspace", "no_run", "no_step"),
+            "No such workspace, or nothing by that id in it: code no_workspace, no_run or no_step.",
+        ),
+    ],
+)
+def test_a_404_lists_its_codes(codes: tuple[ProblemCode, ...], description: str) -> None:
+    assert problems(404, not_found=codes)[404]["description"] == description
+
+
+def test_a_429_says_when_to_try_again() -> None:
+    # no route answers 429 before P4 builds the queue, so a route of its own raises it
+    app = FastAPI(exception_handlers=HANDLERS)
+
+    @app.post("/busy")
+    async def busy() -> None:
+        raise too_many_active(retry_after=30)
+
+    response = TestClient(app).post("/busy")
+    assert response.status_code == 429
+    assert response.headers["Retry-After"] == "30"
+    assert response.json() == {"detail": BUSY, "code": "too_many_active"}
 
 
 @pytest.mark.parametrize(
@@ -376,6 +454,15 @@ def test_a_validation_error_is_a_422_problem(client: TestClient) -> None:
             ["body", "follows", "follow_up_id"],
             "missing",
         ),
+        # a revision sends follows or names its via, never both, whatever the via
+        *(
+            (
+                {"message": "Why?", "via": via, "follows": {"run_id": "r1", "follow_up_id": "f1"}},
+                ["body", "via"],
+                "via_with_follows",
+            )
+            for via in ("nearest", "composer")
+        ),
     ],
 )
 def test_a_revision_is_checked_before_the_stub(
@@ -386,10 +473,32 @@ def test_a_revision_is_checked_before_the_stub(
     assert [(e["loc"], e["type"]) for e in response.json()["errors"]] == [(loc, type_)]
 
 
-def test_a_follow_up_reaches_the_stub(client: TestClient) -> None:
-    body = {"message": "Why?", "follows": {"run_id": "r1", "follow_up_id": "f1"}}
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"message": "Why?", "follows": {"run_id": "r1", "follow_up_id": "f1"}},
+        {"message": "Which line had the most scrap?", "via": "nearest"},
+    ],
+)
+def test_a_follow_up_or_a_nearest_question_reaches_the_stub(
+    client: TestClient, body: dict[str, Any]
+) -> None:
     response = client.post(WS.format(ws="w1") + "/threads/t1/revisions", json=body)
     assert response.status_code == 501
+
+
+@pytest.mark.parametrize(("value", "type_"), [("abc", "int_parsing"), ("-1", "greater_than_equal")])
+def test_a_malformed_last_event_id_is_checked_before_the_stub(
+    client: TestClient, value: str, type_: str
+) -> None:
+    url = EVENTS_PATH.format(ws="w1", run_id="r1")
+    response = client.get(url, params={"last_event_id": value})
+    assert response.status_code == 422
+    assert [(e["loc"], e["type"]) for e in response.json()["errors"]] == [
+        (["query", "last_event_id"], type_)
+    ]
+    # a well-formed one reaches the stub
+    assert client.get(url, params={"last_event_id": "3"}).status_code == 501
 
 
 @pytest.mark.parametrize(

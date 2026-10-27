@@ -20,7 +20,7 @@ router = APIRouter(prefix=WS)
     description="The workspace's threads, most recently updated first. A thread's updated_at "
     "moves when a run is created or changes status; feedback and signals do not move it.",
     response_description="Threads, most recently updated first.",
-    responses=problems(404, 422, 501),
+    responses=problems(404, 422, 501, not_found=("no_workspace",)),
 )
 async def list_threads(
     ws: Ws,
@@ -43,7 +43,7 @@ async def list_threads(
     description="Ask a question. 429 (too_many_active) while the workspace has as many runs "
     "queued, running or asking as it allows.",
     response_description="The thread exists and its first run is queued.",
-    responses=problems(404, 422, 429, 501),
+    responses=problems(404, 422, 429, 501, not_found=("no_workspace",)),
 )
 async def create_thread(ws: Ws, body: CreateThread) -> RunCreated:
     raise not_implemented()
@@ -54,7 +54,7 @@ async def create_thread(ws: Ws, body: CreateThread) -> RunCreated:
     operation_id="getThread",
     response_description="The thread with its latest run in full and every run in brief, "
     "oldest first.",
-    responses=problems(404, 501),
+    responses=problems(404, 501, not_found=("no_workspace", "no_thread")),
 )
 async def get_thread(ws: Ws, thread_id: ThreadId) -> Thread:
     raise not_implemented()
@@ -75,15 +75,24 @@ async def get_thread(ws: Ws, thread_id: ThreadId) -> Thread:
     "transcript (a follow-up, a nearest question) becomes the new anchor; composer and "
     "card-text revisions never do. A take-back re-runs revision n-1 and copies its anchor; "
     "taking back a follow-up re-runs the parent's reading.\n\n"
-    "With follows: follows.run_id must be the thread's latest run, else 409 not_latest. That "
-    "run must be complete and follow_up_id one of its follow_ups, else 409 not_answerable. "
-    "Follow-up ids are unique per run and survive a chart pick, but may vanish after a "
-    "side-card answer re-presents the run, and a vanished id is not_answerable too. message "
-    "must equal that follow-up's question, else 422 with errors[0] {loc: [body, message], "
-    "type: follow_up_mismatch}. A clarify run has no answer, so its nearest questions go "
-    "with via nearest and no follows.",
+    "How a follow-up is sent depends on the status of the run that offered it, not on the "
+    "follow-up's kind. A clarify run has no answer, so its follow-ups (its nearest questions) "
+    "go with via nearest and no follows; a complete run's follow-ups, kind nearest included, "
+    "go with follows. via is never sent with follows: 422 with errors[0] {loc: [body, via], "
+    "type: via_with_follows}.\n\n"
+    "With follows: follows.run_id must name a run of this thread, else 404 no_run, and be "
+    "the thread's latest run, else 409 not_latest. That run must be complete and "
+    "follow_up_id one of its follow_ups, else 409 not_answerable. Follow-up ids are unique "
+    "per run and survive a chart pick, but may vanish after a side-card answer re-presents "
+    "the run, and a vanished id is not_answerable too. message must equal that follow-up's "
+    "question, else 422 with errors[0] {loc: [body, message], type: follow_up_mismatch}. A "
+    "follow-up offered by a run an earlier version of sightline made is allowed, never "
+    "stale_run: its question stands on its own, so the new run answers it with today's "
+    "core.\n\n"
+    "With via nearest: the thread's latest run must be a clarify run and message the "
+    "question of one of its follow_ups (kind nearest), else 409 not_answerable.",
     response_description="The revision's run is queued.",
-    responses=problems(404, 409, 422, 429, 501),
+    responses=problems(404, 409, 422, 429, 501, not_found=("no_workspace", "no_thread", "no_run")),
 )
 async def revise_thread(ws: Ws, thread_id: ThreadId, body: Revise) -> RunCreated:
     raise not_implemented()
@@ -97,9 +106,10 @@ async def revise_thread(ws: Ws, thread_id: ThreadId, body: Revise) -> RunCreated
     "Like reviseThread, it supersedes a run of this thread still active and starts a new run "
     "(origin take_back, takes_back n), whose prompt is the text taken back. It re-runs "
     "revision n-1 with that revision's anchor; taking back a follow-up re-runs the parent's "
-    "reading.",
+    "reading. 404 with code no_revision when n names no revision: beyond the latest, or one "
+    "already taken back.",
     response_description="The revision is taken back and the thread runs again without it.",
-    responses=problems(404, 422, 429, 501),
+    responses=problems(404, 422, 429, 501, not_found=("no_workspace", "no_thread", "no_revision")),
 )
 async def take_back_revision(
     ws: Ws, thread_id: ThreadId, n: Annotated[int, Path(ge=1)]

@@ -16,9 +16,10 @@ router = APIRouter(prefix=WS)
     operation_id="sendSignal",
     status_code=204,
     description="A beacon from the client, stored as a raw event that nothing interprets in "
-    "v1: thread_opened when the user opens a thread.",
+    "v1: thread_opened when the user opens a thread. 404 with code no_thread when thread_id "
+    "names no thread of the workspace.",
     response_description="Recorded.",
-    responses=problems(404, 422, 501),
+    responses=problems(404, 422, 501, not_found=("no_workspace", "no_thread")),
 )
 async def send_signal(ws: Ws, body: Signal) -> None:
     raise not_implemented()

@@ -27,7 +27,7 @@ router = APIRouter(prefix=f"{WS}/registry")
     "recently changed first).",
     response_description="A page of entries, the proposed counts per kind, and the kinds' "
     "display words.",
-    responses=problems(404, 422, 501),
+    responses=problems(404, 422, 501, not_found=("no_workspace",)),
 )
 async def list_registry_entries(
     ws: Ws,
@@ -47,7 +47,7 @@ async def list_registry_entries(
     "/entries/{entry_id}",
     operation_id="getRegistryEntry",
     response_description="The entry with its 20 newest runs and its history.",
-    responses=problems(404, 501),
+    responses=problems(404, 501, not_found=("no_workspace", "no_entry")),
 )
 async def get_registry_entry(ws: Ws, entry_id: EntryId) -> RegistryEntryDetail:
     raise not_implemented()
@@ -65,7 +65,7 @@ async def get_registry_entry(ws: Ws, entry_id: EntryId) -> RegistryEntryDetail:
     "changes, words, <locale>, <i>], the word's place in the entry's words. A review "
     "applies from the next run on.",
     response_description="The entry at its new version.",
-    responses=problems(404, 409, 422, 501),
+    responses=problems(404, 409, 422, 501, not_found=("no_workspace", "no_entry")),
 )
 async def review_registry_entry(ws: Ws, entry_id: EntryId, body: Review) -> RegistryEntryDetail:
     raise not_implemented()
