@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter
 
 from sightline_backend.api import WS, Ws, problems
-from sightline_backend.contract import Health, Me
+from sightline_backend.contract import Health, Me, SchemaInfo
 from sightline_backend.errors import not_implemented
 
 router = APIRouter()
@@ -30,6 +28,7 @@ async def health() -> Health:
     description="The caller and every workspace. v1 has no auth: the caller is the one dev "
     "user, a key user in every workspace.",
     response_description="The caller and the workspaces they may use.",
+    responses=problems(501),
 )
 async def get_me() -> Me:
     raise not_implemented()
@@ -38,8 +37,9 @@ async def get_me() -> Me:
 @router.get(
     f"{WS}/schema",
     operation_id="getSchema",
-    response_description="The workspace's warehouse schema (shape not yet drafted).",
-    responses=problems(404),
+    description="The workspace's warehouse as users read it, for browsing what can be asked.",
+    response_description="The workspace's tables with their columns, and its measures.",
+    responses=problems(404, 501),
 )
-async def get_schema(ws: Ws) -> dict[str, Any]:
+async def get_schema(ws: Ws) -> SchemaInfo:
     raise not_implemented()

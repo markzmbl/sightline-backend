@@ -1,5 +1,8 @@
 """Every non-2xx answer is a Problem: {detail, code?, errors?}.
 
+detail is one sentence fit to show users; code names the error for the client; errors
+is technical.
+
 The handlers below normalize what FastAPI and Starlette raise (HTTPException, request
 validation errors, anything unhandled) and the backend's own ProblemError into that shape,
 so the client reads one error type everywhere.
@@ -16,6 +19,11 @@ from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from sightline_backend.contract import ErrorItem, Problem
+
+# the backend's own details, each one sentence a user can read
+NOT_BUILT = "This part of sightline is not built yet."
+INVALID = "The request is not valid."
+CRASHED = "Something went wrong on our side."
 
 
 class ProblemError(Exception):
@@ -37,7 +45,7 @@ class ProblemError(Exception):
 
 def not_implemented() -> ProblemError:
     """What a route answers until its phase builds it."""
-    return ProblemError(501, "not implemented yet", code="not_implemented")
+    return ProblemError(501, NOT_BUILT, code="not_implemented")
 
 
 def problem_response(
@@ -76,12 +84,12 @@ async def _http_error(request: Request, exc: StarletteHTTPException) -> Response
 
 async def _validation_error(request: Request, exc: RequestValidationError) -> Response:
     errors = [_item(e) for e in exc.errors()]
-    return problem_response(422, Problem(detail="invalid request", errors=errors))
+    return problem_response(422, Problem(detail=INVALID, errors=errors))
 
 
 async def _crash(request: Request, exc: Exception) -> Response:
     # Starlette re-raises the exception after this answer, so the server still logs it
-    return problem_response(500, Problem(detail="internal error"))
+    return problem_response(500, Problem(detail=CRASHED))
 
 
 # FastAPI(exception_handlers=...). Both HTTPException classes are named: FastAPI registers

@@ -18,7 +18,7 @@ router = APIRouter(prefix=WS)
     description="A beacon from the client, stored as a raw event that nothing interprets in "
     "v1: thread_opened when the user opens a thread.",
     response_description="Recorded.",
-    responses=problems(404, 422),
+    responses=problems(404, 422, 501),
 )
 async def send_signal(ws: Ws, body: Signal) -> None:
     raise not_implemented()

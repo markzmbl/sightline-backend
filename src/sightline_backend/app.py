@@ -17,14 +17,16 @@ from sightline_backend.errors import HANDLERS
 
 DESCRIPTION = """\
 Ask a question of a workspace's warehouse, revise it by prompt, and follow the run live. \
-A thread is one question plus its revisions; each revision is one run. Runs are \
+A thread is one question plus the runs after it: revisions typed by prompt, follow-ups and \
+nearest questions sent from the transcript, and take-backs; each is one run. Runs are \
 asynchronous: creating one answers 202 with its id, and progress arrives on the run's \
-event stream. Stages are not monotonic: a reconsider loop can start abstract again after \
-validate, with the phase back at understand, and side states (clarify, ask, reconsider, \
-restore) can appear as a stage. A run can go from complete back to queued under the same \
-id (an answer to a beside-the-chart card, a chart switch); a run.status queued after \
-running means a worker restarted it. Every error is a Problem. There is no auth in v1: \
-calls are same-origin and carry no header.
+event stream. Within one pass the phases are contiguous (understand, analyse, present); \
+only reconsider, repair and the hole loop go back, e.g. a reconsider loop can start \
+abstract again after validate, with the phase back at understand. Side states (clarify, \
+ask, propose, reconsider, repair, restore) can appear as a stage. A run can go from \
+complete back to queued under the same id (an answer to a beside-the-chart card, a chart \
+switch); a run.status queued after running means a worker restarted it. Every error is a \
+Problem. There is no auth in v1: calls are same-origin and carry no header.
 """
 
 _PROBLEM = {"$ref": "#/components/schemas/Problem"}

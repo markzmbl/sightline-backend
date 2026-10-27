@@ -14,11 +14,13 @@ from sightline_backend.api import WS
 from sightline_backend.api.events import EVENTS_PATH
 from sightline_backend.app import create_app, openapi_json
 from sightline_backend.contract import Problem, RunEvent
+from sightline_backend.errors import INVALID, NOT_BUILT
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTRACT = ROOT / "contract" / "openapi.json"
-# the frontend's draft, kept in sightline-web until this repo's contract replaces it
-DRAFT = ROOT.parent / "sightline-web" / "contract" / "openapi.draft.yaml"
+# the frontend's draft, kept in web/ (nested beside backend/ in sightline) until this repo's
+# contract replaces it
+DRAFT = ROOT.parent / "web" / "contract" / "openapi.draft.yaml"
 METHODS = ("get", "put", "post", "patch", "delete")
 OUTSIDE_WORKSPACES = ("/healthz", "/api/v1/me")
 PROBLEM = {"application/json": {"schema": {"$ref": "#/components/schemas/Problem"}}}
@@ -34,10 +36,22 @@ BODIES: dict[str, Any] = {
     "sendSignal": {"kind": "thread_opened", "thread_id": "t1"},
 }
 
+# Where the contract deliberately departs from the frontend's draft at an operation: the
+# parameters v0.2 adds, all optional, so a client written against the draft still works.
+# listThreads and listRegistryEntries gain a text search (q) and updated_since or sort (the
+# review's COULD items); runEvents gains ?last_event_id=, the fallback for a client that
+# cannot send Last-Event-ID. The draft's schemas are not compared: v0.2 changes many of them
+# on purpose (contract.py says how).
+DRAFT_DEPARTURES = {
+    "listThreads": {("q", "query"), ("updated_since", "query")},
+    "listRegistryEntries": {("q", "query"), ("sort", "query")},
+    "runEvents": {("last_event_id", "query")},
+}
+
 # The contract as the frontend's types see it, written out so that a change to a model or a
 # route fails here until it is made on purpose: every operation's method and path, and every
-# schema's properties (`?` outside required), enum values or union members. A change here is
-# a contract change, agreed with the frontend session first.
+# schema's properties (`?` outside required), enum values, union members or map values. A
+# change here is a contract change, agreed with the frontend session first.
 OPERATIONS = {
     "health": "get /healthz",
     "getMe": "get /api/v1/me",
@@ -48,6 +62,7 @@ OPERATIONS = {
     "reviseThread": "post /api/v1/workspaces/{ws}/threads/{thread_id}/revisions",
     "takeBackRevision": "delete /api/v1/workspaces/{ws}/threads/{thread_id}/revisions/{n}",
     "getRun": "get /api/v1/workspaces/{ws}/runs/{run_id}",
+    "getRunStep": "get /api/v1/workspaces/{ws}/runs/{run_id}/steps/{step_id}",
     "answerCard": "post /api/v1/workspaces/{ws}/runs/{run_id}/answers",
     "cancelRun": "post /api/v1/workspaces/{ws}/runs/{run_id}/cancel",
     "pickChart": "post /api/v1/workspaces/{ws}/runs/{run_id}/chart",
@@ -59,70 +74,106 @@ OPERATIONS = {
     "sendSignal": "post /api/v1/workspaces/{ws}/signals",
 }
 SHAPES = {
+    "AnalysisStep": "id label",
     "Answers": "answers text?",
     "AskPolicy": "never|unsure|always",
+    "CallInfo": "cost_usd from_cache kind model seconds",
     "Card": "blocking points",
     "CardEvent": "card run_id type",
     "Cell": "string|integer|number|boolean|null",
-    "ChartEvent": "chart run_id type",
-    "ChartOption": "chart hint label score",
+    "ChartEvent": "chart run_id support_id type",
+    "ChartOption": "chart drawn hint label score",
     "ChartPick": "chart",
-    "ChartView": "alternatives chart label png_url spec",
-    "Clarify": "gaps missing nearest record warnings",
+    "ChartRef": "chart label",
+    "ChartView": "chart hint label min_width options png_url score spec subtitle title",
+    "Clarify": "gaps missing record warnings warnings_total",
     "ClarifyEvent": "clarify run_id type",
-    "Column": "name type",
+    "Column": "description format label name role type unit",
+    "ColumnRole": "dimension|measure|time",
     "CreateThread": "ask? question",
-    "DecidedBy": "rules|s1|s2|user",
-    "DecisionPoint": "by chosen confidence default id open options question stage step why",
-    "Definition": "label name source status",
+    "DecidedBy": "rules|s1|s2|user|default",
+    "DecisionPoint": "by chosen confidence default entry_id id open options question stage step "
+    "why",
+    "Definition": "definition entry_id label name source status",
     "Demand": "first_asked last_asked runs",
+    "EntryChange": "action at by note version",
     "EntryChoice": "count label option",
     "EntryGap": "missing record",
-    "EntryRun": "at question rating run_id thread_id",
+    "EntryRun": "at prompt question rating revision run_id thread_id",
     "EntrySource": "kind text",
-    "ErrorEvent": "message run_id stage type",
+    "ErrorEvent": "code detail message retryable run_id stage type",
     "ErrorItem": "ctx? loc msg type",
     "Feedback": "rating",
+    "FollowRef": "follow_up_id kind run_id",
+    "FollowRequest": "follow_up_id run_id",
+    "FollowUp": "id kind question",
+    "FollowUpKind": "breakdown|next_level|check|nearest",
     "Gap": "reason requested slot suggestions",
+    "GapSuggestion": "id label question",
     "Health": "ok version?",
-    "Me": "user workspaces",
+    "KeyPoint": "id text",
+    "KindInfo": "kind label plural",
+    "Locale": "en|de",
+    "Me": "last_workspace user workspaces",
     "Option": "hint id label",
     "Problem": "code? detail errors?",
     "Rating": "up|down",
-    "RegistryCounts": "default gap measure",
-    "RegistryEntry": "choices? definition demand gap? id kind label note reviewed_by source "
-    "status term updated_at version words",
-    "RegistryEntryDetail": "choices? definition demand gap? id kind label note reviewed_by "
-    "runs source status term updated_at version words",
+    "RegistryCounts": "{string: integer}",
+    "RegistryEntry": "choices? chosen_option definition demand gap? id kind label note "
+    "reviewed_at reviewed_by source status term updated_at version words",
+    "RegistryEntryDetail": "choices? chosen_option definition demand gap? history id kind label "
+    "note reviewed_at reviewed_by runs runs_total source status term updated_at version words",
     "RegistryKind": "measure|default|gap",
-    "RegistryPage": "counts items next_cursor",
+    "RegistryPage": "counts items kinds next_cursor",
     "RegistryStatus": "proposed|approved|rejected",
     "RestatementEvent": "run_id text type",
-    "Result": "chart columns findings row_count rows sql truncated",
+    "Result": "chart columns concerns findings lead row_count rows sql step_id storyline supports "
+    "truncated verdict",
     "ResultEvent": "result run_id type",
+    "ResultVerdict": "pass|warn|fail",
     "Review": "action changes? note? version",
     "ReviewAction": "approve|reject|reopen|edit",
     "ReviewChanges": "label? words?",
-    "Revise": "message",
+    "Revise": "follows? message via?",
     "RunCreated": "run_id thread_id",
-    "RunError": "message stage",
-    "RunEvent": "RunStatusEvent|StageStartedEvent|StageFinishedEvent|RestatementEvent|"
-    "CardEvent|ClarifyEvent|ChartEvent|ResultEvent|ErrorEvent",
+    "RunError": "code detail message retryable stage",
+    "RunErrorCode": "timeout|warehouse_unavailable|model_unavailable|budget_exhausted|internal",
+    "RunEvent": "RunStatusEvent|StageStartedEvent|StageFinishedEvent|StepStartedEvent|"
+    "StepFinishedEvent|RestatementEvent|CardEvent|ClarifyEvent|ChartEvent|ResultEvent|ErrorEvent",
+    "RunOrigin": "question|revision|take_back|follow_up|nearest",
     "RunStatus": "queued|running|asking|complete|clarify|failed|cancelled|superseded",
     "RunStatusEvent": "run_id status type",
-    "RunSummary": "feedback finished_at id prompt restatement revision started_at status",
-    "RunView": "card clarify definitions error feedback finished_at id last_event_id phase "
-    "prompt restatement result revision stage started_at status thread_id timings",
+    "RunSummary": "chart feedback finished_at follows id origin prompt restatement revision "
+    "started_at status takes_back top",
+    "RunView": "card clarify definitions error feedback finished_at follow_ups follows id "
+    "last_event_id locale origin phase prompt restatement result revision stage started_at "
+    "status step steps takes_back thread_id timings",
+    "SchemaColumn": "description label name role type unit",
+    "SchemaInfo": "measures tables",
+    "SchemaMeasure": "description label name unit",
+    "SchemaTable": "columns description label name",
     "Signal": "kind thread_id",
     "SignalKind": "thread_opened",
-    "StageFinishedEvent": "at elapsed_ms phase run_id stage type",
+    "StageFinishedEvent": "at calls? elapsed_ms phase run_id stage type",
     "StageStartedEvent": "at phase run_id stage type",
     "StageTiming": "elapsed_ms phase stage started_at",
-    "Thread": "created_at id latest question runs updated_at",
+    "StepFinishedEvent": "at cached elapsed_ms role run_id stage step type verdict",
+    "StepRecord": "cached elapsed_ms id label role row_count sql stage started_at verdict",
+    "StepResult": "columns label row_count rows sql step_id truncated",
+    "StepRole": "answer|probe|reference|denominator|comparison|decomposition|check|lookup",
+    "StepStartedEvent": "at run_id stage step type",
+    "StepVerdict": "as_expected|contradicts|routine|inconclusive|no_effect|failed",
+    "Storyline": "key_line notes top",
+    "Support": "chart drawn id layer note point role text",
+    "SupportDrawn": "main|small|dropped|none",
+    "SupportRole": "answer|comparison|reference|routine_band|whole|rest|denominator|decomposition|"
+    "exclusion|exception|context",
+    "Thread": "created_at id latest locale question runs updated_at",
     "ThreadPage": "items next_cursor",
     "ThreadSummary": "active_run_id id question restatement revisions status updated_at",
     "User": "email? id name",
-    "Workspace": "id name pack",
+    "Workspace": "id name pack role starters",
+    "WorkspaceRole": "key_user|member",
 }
 
 DOC = create_app().openapi()
@@ -143,18 +194,21 @@ def _shape(schema: dict[str, Any]) -> str:
         return "|".join(schema["enum"])
     if "const" in schema:
         return str(schema["const"])
+    if "additionalProperties" in schema:
+        return f"{{string: {schema['additionalProperties']['type']}}}"
     branches = schema.get("oneOf") or schema.get("anyOf") or []
     return "|".join(b["$ref"].rsplit("/", 1)[1] if "$ref" in b else b["type"] for b in branches)
 
 
 def _parameters(doc: dict[str, Any], path: str, op: dict[str, Any]) -> dict[Any, Any]:
     # (name, in) -> (required, schema), the path's own parameters included and $refs
-    # resolved; FastAPI's titles are left out, they do not reach the client's types
+    # resolved; FastAPI's titles and descriptions are left out, they do not change the
+    # client's types
     found = {}
     for parameter in [*doc["paths"][path].get("parameters", []), *op.get("parameters", [])]:
         if "$ref" in parameter:
             parameter = doc["components"]["parameters"][parameter["$ref"].rsplit("/", 1)[1]]
-        schema = {k: v for k, v in parameter["schema"].items() if k != "title"}
+        schema = {k: v for k, v in parameter["schema"].items() if k not in ("title", "description")}
         found[parameter["name"], parameter["in"]] = (parameter.get("required", False), schema)
     return found
 
@@ -201,6 +255,11 @@ def test_the_event_stream_is_run_events_after_last_event_id() -> None:
     }
     headers = [p for p in stream["parameters"] if p["in"] == "header"]
     assert [(p["name"], p["required"]) for p in headers] == [("Last-Event-ID", False)]
+    # the fallback for a client that cannot send the header
+    queries = [p for p in stream["parameters"] if p["in"] == "query"]
+    assert [(p["name"], p["required"], p["schema"]["type"]) for p in queries] == [
+        ("last_event_id", False, "integer")
+    ]
 
 
 def test_no_parameter_is_sent_as_null() -> None:
@@ -216,7 +275,8 @@ def test_no_parameter_is_sent_as_null() -> None:
 
 @pytest.mark.skipif(not DRAFT.exists(), reason="the frontend's draft is gone")
 def test_every_operation_of_the_frontends_draft_is_here() -> None:
-    # the same method, path, parameters and request body, and at least its responses
+    # the same method, path, parameters (but for DRAFT_DEPARTURES) and request body, and at
+    # least its responses
     draft = yaml.safe_load(DRAFT.read_text(encoding="utf-8"))
     ours = {op["operationId"]: (method, path, op) for method, path, op in _operations(DOC)}
     for method, path, op in _operations(draft):
@@ -224,7 +284,12 @@ def test_every_operation_of_the_frontends_draft_is_here() -> None:
         assert name in ours, name
         our_method, our_path, our_op = ours[name]
         assert (our_method, our_path) == (method, path), name
-        assert _parameters(DOC, our_path, our_op) == _parameters(draft, path, op), name
+        parameters = _parameters(DOC, our_path, our_op)
+        added = DRAFT_DEPARTURES.get(name, set())
+        assert added <= set(parameters), name
+        assert not any(parameters[key][0] for key in added), name
+        kept = {key: value for key, value in parameters.items() if key not in added}
+        assert kept == _parameters(draft, path, op), name
         body, our_body = op.get("requestBody"), our_op.get("requestBody")
         if body is None:
             assert our_body is None, name
@@ -254,6 +319,17 @@ def test_every_error_is_a_problem_and_nothing_asks_for_auth() -> None:
                 assert response.get("content") == PROBLEM, f"{method} {path} {status}"
 
 
+def test_every_stub_lists_its_501_and_every_429_its_retry_after() -> None:
+    for method, path, op in _operations(DOC):
+        responses = op["responses"]
+        if op["operationId"] != "health":
+            assert "501" in responses, f"{method} {path}"
+        if "429" in responses:
+            headers = responses["429"].get("headers", {})
+            assert set(headers) == {"Retry-After"}, f"{method} {path}"
+            assert headers["Retry-After"]["schema"] == {"type": "integer"}, f"{method} {path}"
+
+
 @pytest.mark.parametrize(
     ("method", "path", "op"),
     [o for o in _operations(DOC) if o[2]["operationId"] != "health"],
@@ -264,10 +340,10 @@ def test_every_stub_answers_501_with_a_problem(
 ) -> None:
     body = BODIES.get(op["operationId"])
     assert ("requestBody" in op) == (body is not None), f"BODIES lacks {op['operationId']}"
-    url = path.format(ws="w1", thread_id="t1", run_id="r1", entry_id="e1", n=1)
+    url = path.format(ws="w1", thread_id="t1", run_id="r1", step_id="s1", entry_id="e1", n=1)
     response = client.request(method, url, json=body)
     assert response.status_code == 501
-    assert response.json() == {"detail": "not implemented yet", "code": "not_implemented"}
+    assert response.json() == {"detail": NOT_BUILT, "code": "not_implemented"}
 
 
 def test_health_answers(client: TestClient) -> None:
@@ -282,6 +358,7 @@ def test_a_validation_error_is_a_422_problem(client: TestClient) -> None:
     problem = response.json()
     Problem.model_validate(problem)
     assert set(problem) == {"detail", "errors"}
+    assert problem["detail"] == INVALID
     for item in problem["errors"]:
         assert {"loc", "msg", "type"} <= set(item) <= {"loc", "msg", "type", "ctx"}
     assert [(e["loc"], e["type"]) for e in problem["errors"]] == [
@@ -290,10 +367,41 @@ def test_a_validation_error_is_a_422_problem(client: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
+    ("body", "loc", "type_"),
+    [
+        # card text is no via: the backend marks a revision from answerCard's text itself
+        ({"message": "only line 2", "via": "card_text"}, ["body", "via"], "literal_error"),
+        (
+            {"message": "Why?", "follows": {"run_id": "r1"}},
+            ["body", "follows", "follow_up_id"],
+            "missing",
+        ),
+    ],
+)
+def test_a_revision_is_checked_before_the_stub(
+    client: TestClient, body: dict[str, Any], loc: list[str | int], type_: str
+) -> None:
+    response = client.post(WS.format(ws="w1") + "/threads/t1/revisions", json=body)
+    assert response.status_code == 422
+    assert [(e["loc"], e["type"]) for e in response.json()["errors"]] == [(loc, type_)]
+
+
+def test_a_follow_up_reaches_the_stub(client: TestClient) -> None:
+    body = {"message": "Why?", "follows": {"run_id": "r1", "follow_up_id": "f1"}}
+    response = client.post(WS.format(ws="w1") + "/threads/t1/revisions", json=body)
+    assert response.status_code == 501
+
+
+@pytest.mark.parametrize(
     ("path", "body", "loc"),
     [
         ("/threads", {"question": "best\x00plant"}, ["body", "question"]),
         ("/threads/t1/revisions", {"message": "line\x002"}, ["body", "message"]),
+        (
+            "/threads/t1/revisions",
+            {"message": "Why?", "follows": {"run_id": "r\x001", "follow_up_id": "f1"}},
+            ["body", "follows", "run_id"],
+        ),
         ("/runs/r1/answers", {"answers": {"reading": "oee\x00"}}, ["body", "answers", "reading"]),
         ("/runs/r1/answers", {"answers": {}, "text": "\x00"}, ["body", "text"]),
         ("/runs/r1/chart", {"chart": "line\x00"}, ["body", "chart"]),

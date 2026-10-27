@@ -12,12 +12,12 @@ The plan, with its decisions, is
 
 This repo holds the contract only:
 
-- `src/sightline_backend/contract.py`: the API's pydantic models, mirroring the frontend's
-  `web/contract/openapi.draft.yaml` with its schema and operation names.
+- `src/sightline_backend/contract.py`: the API's pydantic models (contract v0.2), started
+  from the frontend's `web/contract/openapi.draft.yaml` with its schema and operation
+  names, and changed since by agreement with the frontend session.
 - `src/sightline_backend/api/`: every route with its path, method, operationId, status
   codes and models. Each one answers 501 with a Problem (`code: not_implemented`) until
-  its phase builds it; `/healthz` answers. That 501 is scaffolding, not contract: no
-  operation declares it, and `Problem.code` does not list it.
+  its phase builds it, and lists that 501 while it is a stub; `/healthz` answers.
 - `contract/openapi.json`: the OpenAPI document generated from the two, committed.
 
 There is no database, worker or core dependency yet. The core (`sightline`) joins in P3/P4.
@@ -48,7 +48,8 @@ uv run python scripts/export_openapi.py
 also holds the contract written out (`OPERATIONS`, `SHAPES`: every operation's method and
 path, every schema's properties and required fields), so a model change fails there until
 the snapshot is changed with it, on purpose. While the frontend's draft exists, it also
-checks that every draft operation is here with the same parameters, body and responses.
+checks that every draft operation is here with the same parameters, body and responses,
+but for the optional parameters v0.2 adds on purpose (`DRAFT_DEPARTURES`).
 
 A contract change goes through the frontend session first, by message: propose it, agree
 on it, then change the models here. Never change the contract on the backend's side alone.
